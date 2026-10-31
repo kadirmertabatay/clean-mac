@@ -62,7 +62,9 @@ final class DiskScanner {
     ]
 
     /// Başka birimleri ve sanal dosya sistemlerini tekrar saymamak için atlanan yollar.
-    static let excludedPaths: Set<String> = ["/Volumes", "/System/Volumes", "/dev", "/net", "/home"]
+    /// /.nofollow, /.resolve ve /.vol tüm diski yeniden gösteren sanal yollardır.
+    static let excludedPaths: Set<String> = ["/Volumes", "/System/Volumes", "/dev", "/net", "/home",
+                                             "/.nofollow", "/.resolve", "/.vol"]
 
     static let protectedRoots = ["/System", "/usr", "/bin", "/sbin", "/Library", "/Applications", "/opt",
                                  "/etc", "/private/etc", "/private/var/db", "/private/var/vm", "/var/db", "/var/vm"]
@@ -83,42 +85,75 @@ final class DiskScanner {
         self.coordinator = coordinator
     }
 
+    static let protectedRootSet = Set(protectedRoots)
+
     static func isProtectedPath(_ path: String) -> Bool {
         if protectedRoots.contains(where: { path == $0 || path.hasPrefix($0 + "/") }) { return true }
         return path.contains("/Library/") || path.hasSuffix("/Library")
     }
 
+    /// Kökün kendisi, sembolik bağlantısı çözülmüş hâli ya da bir üst klasörü korumalıysa (veya paketse) true.
+    static func isProtectedRoot(_ root: URL) -> Bool {
+        let resolved = root.resolvingSymlinksInPath()
+        if isProtectedPath(root.path) || isProtectedPath(resolved.path) { return true }
+        var url = resolved
+        while url.path != "/" {
+            if (try? url.resourceValues(forKeys: [.isPackageKey]))?.isPackage == true { return true }
+            url = url.deletingLastPathComponent()
+        }
+        return false
+    }
+
+    /// Kökten bu derinliğe kadar klasörler ayrı işlere bölünür; daha derindekiler tek işte özyinelemeli taranır.
+    static let splitDepth = 4
+
     func scan(root: URL) -> ScanResult {
         let start = Date()
-        let rootNode = FileNode(url: root, name: root.abbreviatedPath, isDirectory: true)
-        let rootProtected = Self.isProtectedPath(root.path)
+        let rootName = root.path == "/" ? (DiskInfo.current()?.name ?? "Macintosh HD") : root.abbreviatedPath
+        let rootNode = FileNode(url: root, name: rootName, isDirectory: true)
+        let queue = JobQueue(SubdirJob(node: rootNode, protected: Self.isProtectedRoot(root),
+                                       inArtifact: false, isArtifact: false, depth: 0))
 
-        // Kök klasörün doğrudan içeriğini işle, alt klasörleri işçilere dağıt.
-        let rootWorker = Worker(coordinator: coordinator)
-        let subdirs = rootWorker.scanDirectory(rootNode, protected: rootProtected, inArtifact: false, recurse: false)
-        let workers = subdirs.map { _ in Worker(coordinator: coordinator) }
-        DispatchQueue.concurrentPerform(iterations: subdirs.count) { i in
-            let job = subdirs[i]
-            workers[i].scanSubtree(job.node, protected: job.protected, inArtifact: job.inArtifact)
-            if job.isArtifact && job.node.size > 0 { workers[i].artifacts.append(job.node) }
+        // Her çekirdek kuyruktan iş çeker; sığ klasörler yeni işlere bölünür, böylece tek bir
+        // büyük klasör (ör. ~/Library) tüm taramayı tek iş parçacığına mahkûm etmez.
+        let workerCount = max(ProcessInfo.processInfo.activeProcessorCount, 2)
+        let workers = (0..<workerCount).map { _ in Worker(coordinator: coordinator) }
+        DispatchQueue.concurrentPerform(iterations: workerCount) { i in
+            let w = workers[i]
+            while let job = queue.next() {
+                var children: [SubdirJob] = []
+                if coordinator.isCancelled {
+                    // Kuyruğu boşaltmak için işi tamamlanmış say.
+                } else if job.depth < Self.splitDepth {
+                    children = w.scanDirectory(job.node, protected: job.protected, inArtifact: job.inArtifact, recurse: false)
+                        .map { $0.withDepth(job.depth + 1) }
+                    w.splitJobs.append(job)
+                } else {
+                    w.scanSubtree(job.node, protected: job.protected, inArtifact: job.inArtifact)
+                    if job.isArtifact && job.node.size > 0 { w.artifacts.append(job.node) }
+                }
+                queue.finish(adding: children)
+            }
         }
 
-        var files = rootWorker.files
-        var artifacts = rootWorker.artifacts
-        var totalFiles = rootWorker.totalFiles
-        var unreadable = rootWorker.unreadable
-        for (job, w) in zip(subdirs, workers) {
-            rootNode.size += job.node.size
-            rootNode.fileCount += job.node.fileCount
-            files += w.files
-            artifacts += w.artifacts
-            totalFiles += w.totalFiles
-            unreadable += w.unreadable
+        // Bölünen klasörlerin boyutlarını en derinden köke doğru topla.
+        let split = workers.flatMap(\.splitJobs).sorted { $0.depth > $1.depth }
+        var artifacts = workers.flatMap(\.artifacts)
+        for job in split {
+            let node = job.node
+            for c in node.children where c.isDirectory {
+                node.size += c.size
+                node.fileCount += c.fileCount
+            }
+            node.children.sort { $0.size > $1.size }
+            if job.isArtifact && node.size > 0 { artifacts.append(node) }
         }
-        rootNode.children.sort { $0.size > $1.size }
+
         coordinator.add(files: 0, bytes: 0, at: root.path, force: true)
-        return ScanResult(root: rootNode, files: files, devArtifacts: artifacts, totalFiles: totalFiles,
-                          unreadable: unreadable, duration: Date().timeIntervalSince(start))
+        return ScanResult(root: rootNode, files: workers.flatMap(\.files), devArtifacts: artifacts,
+                          totalFiles: workers.reduce(0) { $0 + $1.totalFiles },
+                          unreadable: workers.reduce(0) { $0 + $1.unreadable },
+                          duration: Date().timeIntervalSince(start))
     }
 
     struct SubdirJob {
@@ -126,6 +161,43 @@ final class DiskScanner {
         let protected: Bool
         let inArtifact: Bool
         let isArtifact: Bool
+        var depth = 0
+
+        func withDepth(_ d: Int) -> SubdirJob {
+            var j = self
+            j.depth = d
+            return j
+        }
+    }
+
+    /// İş parçacıkları arasında paylaşılan iş kuyruğu. Kuyruk boş ve çalışan iş kalmadığında next() nil döner.
+    final class JobQueue: @unchecked Sendable {
+        private let cond = NSCondition()
+        private var jobs: [SubdirJob]
+        private var inFlight = 0
+
+        init(_ first: SubdirJob) {
+            jobs = [first]
+        }
+
+        func next() -> SubdirJob? {
+            cond.lock()
+            defer { cond.unlock() }
+            while jobs.isEmpty {
+                if inFlight == 0 { return nil }
+                cond.wait()
+            }
+            inFlight += 1
+            return jobs.removeLast()
+        }
+
+        func finish(adding newJobs: [SubdirJob]) {
+            cond.lock()
+            jobs.append(contentsOf: newJobs)
+            inFlight -= 1
+            cond.broadcast()
+            cond.unlock()
+        }
     }
 
     final class Worker {
@@ -133,6 +205,7 @@ final class DiskScanner {
         let fm = FileManager()
         var files: [FileEntry] = []
         var artifacts: [FileNode] = []
+        var splitJobs: [SubdirJob] = []
         var totalFiles = 0
         var unreadable = 0
         private var pendingFiles = 0
@@ -167,9 +240,13 @@ final class DiskScanner {
                 if rv.isSymbolicLink == true { continue }
 
                 if rv.isDirectory == true {
-                    if DiskScanner.excludedPaths.contains(child.path) { continue }
+                    // Bazı sanal yollar sonda "/" ile döner (ör. "/.nofollow/").
+                    var childPath = child.path
+                    if childPath.count > 1, childPath.hasSuffix("/") { childPath.removeLast() }
+                    if DiskScanner.excludedPaths.contains(childPath) { continue }
                     let isPackage = rv.isPackage == true
                     let childProtected = protected || isPackage || child.lastPathComponent == "Library"
+                        || DiskScanner.protectedRootSet.contains(childPath)
                     let isArtifact = !inArtifact && !childProtected
                         && DiskScanner.devArtifactNames.contains(child.lastPathComponent)
                     let sub = FileNode(url: child, isDirectory: true, isPackage: isPackage)

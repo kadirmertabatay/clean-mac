@@ -54,6 +54,13 @@ struct ContentView: View {
                             .tag(s)
                     }
                 }
+                Section("Güvenlik") {
+                    ForEach([AppSection.history, .exclusions]) { s in
+                        Label(s.title, systemImage: s.icon)
+                            .badge(badge(for: s))
+                            .tag(s)
+                    }
+                }
             }
             .navigationSplitViewColumnWidth(min: 210, ideal: 230)
             .safeAreaInset(edge: .bottom) { diskFooter }
@@ -65,6 +72,8 @@ struct ContentView: View {
             case .largeFiles: LargeFilesView()
             case .duplicates: DuplicatesView()
             case .junk: JunkView()
+            case .history: HistoryView()
+            case .exclusions: ExclusionsView()
             }
         }
         .overlay(alignment: .bottom) {
@@ -87,6 +96,8 @@ struct ContentView: View {
             return total > 0 ? Text(total.formattedBytes) : nil
         case .duplicates where state.duplicatesReady:
             return state.duplicateGroups.isEmpty ? nil : Text("\(state.duplicateGroups.count)")
+        case .exclusions:
+            return state.excludedPaths.isEmpty ? nil : Text("\(state.excludedPaths.count)")
         default:
             return nil
         }

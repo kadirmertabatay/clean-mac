@@ -1,3 +1,4 @@
+import QuickLook
 import Charts
 import SwiftUI
 
@@ -5,13 +6,12 @@ struct ExplorerView: View {
     @EnvironmentObject var state: AppState
     @State private var selection = Set<FileNode.ID>()
     @State private var pendingRemoval: [FileNode] = []
+    @State private var previewURL: URL?
 
     var body: some View {
         VStack(spacing: 0) {
             PageHeader(title: "Klasör Gezgini", subtitle: subtitle) {
-                Button {
-                    if state.chooseScanRoot() { state.startScan() }
-                } label: { Label("Klasör Seç", systemImage: "folder.badge.plus") }
+                ScanScopeMenu { state.startScan() }
                 Button {
                     state.startScan()
                 } label: { Label(state.rootNode == nil ? "Tara" : "Yeniden Tara", systemImage: "arrow.clockwise") }
@@ -100,7 +100,7 @@ struct ExplorerView: View {
 
     private func list(_ node: FileNode) -> some View {
         List(node.children, selection: $selection) { child in
-            ExplorerRow(node: child, parentSize: node.size)
+            ExplorerRow(node: child, parentSize: node.size, isExcluded: state.isExcluded(child.url.path))
         }
         .contextMenu(forSelectionType: FileNode.ID.self) { ids in
             let nodes = resolve(ids, in: node)
@@ -108,8 +108,15 @@ struct ExplorerView: View {
                 if nodes.count == 1, let n = nodes.first, n.canDrillDown {
                     Button("Aç") { navigate(to: n) }
                 }
+                if nodes.count == 1, let n = nodes.first { Button("Hızlı Bakış") { previewURL = n.url } }
                 Button("Finder'da Göster") { Finder.reveal(nodes.map(\.url)) }
                 Button("Yolu Kopyala") { Finder.copyPaths(nodes.map(\.url)) }
+                Divider()
+                if nodes.allSatisfy({ state.excludedPaths.contains($0.url.path) }) {
+                    Button("Hariç Tutmayı Kaldır") { nodes.forEach { state.removeExclusion($0.url.path) } }
+                } else {
+                    Button("Hariç Tut (önerme, silme)") { nodes.forEach { state.addExclusion($0.url) } }
+                }
                 Divider()
                 Button("Çöp Kutusu'na Taşı…", role: .destructive) { pendingRemoval = nodes }
             }
@@ -122,12 +129,19 @@ struct ExplorerView: View {
             let nodes = resolve(selection, in: node)
             if !nodes.isEmpty { pendingRemoval = nodes }
         }
+        .onKeyPress(.space) {
+            guard let n = resolve(selection, in: node).first else { return .ignored }
+            previewURL = n.url
+            return .handled
+        }
+        .quickLookPreview($previewURL)
     }
 }
 
 private struct ExplorerRow: View {
     let node: FileNode
     let parentSize: Int64
+    var isExcluded = false
 
     private var fraction: Double { parentSize > 0 ? Double(node.size) / Double(parentSize) : 0 }
 
@@ -139,8 +153,14 @@ private struct ExplorerRow: View {
                 FileIconView(url: node.url, size: 22)
             }
             VStack(alignment: .leading, spacing: 2) {
-                Text(node.name).lineLimit(1).truncationMode(.middle)
-                    .foregroundStyle(node.isAggregate ? .secondary : .primary)
+                HStack(spacing: 4) {
+                    Text(node.name).lineLimit(1).truncationMode(.middle)
+                        .foregroundStyle(node.isAggregate ? .secondary : .primary)
+                    if isExcluded {
+                        Image(systemName: "lock.fill").font(.caption2).foregroundStyle(.secondary)
+                            .help("Hariç tutuluyor: önerilmez ve silinmez")
+                    }
+                }
                 if node.isDirectory {
                     Text("\(node.fileCount.formatted()) dosya").font(.caption).foregroundStyle(.secondary)
                 }

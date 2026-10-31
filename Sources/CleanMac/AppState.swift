@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
-    case assistant, overview, explorer, largeFiles, duplicates, junk
+    case assistant, overview, explorer, largeFiles, duplicates, junk, history, exclusions
 
     var id: String { rawValue }
 
@@ -14,6 +14,8 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .largeFiles: "Büyük Dosyalar"
         case .duplicates: "Tekrarlanan Dosyalar"
         case .junk: "Gereksiz Dosyalar"
+        case .history: "Temizlik Geçmişi"
+        case .exclusions: "Hariç Tutulanlar"
         }
     }
 
@@ -25,6 +27,8 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .largeFiles: "doc.badge.arrow.up"
         case .duplicates: "doc.on.doc"
         case .junk: "trash"
+        case .history: "clock.arrow.circlepath"
+        case .exclusions: "lock.shield"
         }
     }
 }
@@ -53,7 +57,9 @@ final class AppState: ObservableObject {
     @Published var toast: Toast?
 
     // Klasör taraması
-    @Published var scanRoot: URL
+    @Published var scanRoot: URL {
+        didSet { UserDefaults.standard.set(scanRoot.path, forKey: "scanRootPath") }
+    }
     @Published private(set) var rootNode: FileNode?
     @Published var currentNode: FileNode?
     @Published private(set) var files: [FileEntry] = []
@@ -82,12 +88,31 @@ final class AppState: ObservableObject {
     @Published private(set) var lastAnalysis: Date?
     @Published var largeFilesStaleOnly = false
     @Published private(set) var isRemoving = false
+    private var junkTask: Task<[JunkCategory], Never>?
+    private var analysisCancelled = false
 
-    init() {
+    // Geçmiş ve hariç tutulanlar
+    @Published private(set) var history: [HistoryRecord] = []
+    @Published private(set) var excludedPaths: [String]
+    private let historyURL: URL
+
+    nonisolated static let defaultHistoryURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("CleanMac/history.json")
+
+    init(historyURL: URL = AppState.defaultHistoryURL) {
         if let custom = ProcessInfo.processInfo.environment["CLEANMAC_SCAN_ROOT"] {
             scanRoot = URL(fileURLWithPath: custom)
+        } else if let saved = UserDefaults.standard.string(forKey: "scanRootPath"),
+                  FileManager.default.fileExists(atPath: saved) {
+            scanRoot = URL(fileURLWithPath: saved)
         } else {
             scanRoot = Self.home
+        }
+        self.historyURL = historyURL
+        excludedPaths = UserDefaults.standard.stringArray(forKey: "excludedPaths") ?? []
+        if let data = try? Data(contentsOf: historyURL),
+           let records = try? JSONDecoder().decode([HistoryRecord].self, from: data) {
+            history = records
         }
     }
 
@@ -119,6 +144,24 @@ final class AppState: ObservableObject {
         }
     }
 
+    static let wholeMac = URL(fileURLWithPath: "/")
+
+    var scanScopeTitle: String {
+        switch scanRoot.path {
+        case "/": "Tüm Mac"
+        case Self.home.path: "Ana Klasör (~)"
+        default: scanRoot.abbreviatedPath
+        }
+    }
+
+    var scanScopeIcon: String {
+        switch scanRoot.path {
+        case "/": "internaldrive"
+        case Self.home.path: "house"
+        default: "folder"
+        }
+    }
+
     func chooseScanRoot() -> Bool {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
@@ -138,13 +181,18 @@ final class AppState: ObservableObject {
         Task { await scan() }
     }
 
+    /// Tarama, tekrar arama, gereksiz dosya taraması ve devam eden tam analizi durdurur.
     func cancelScan() {
+        analysisCancelled = true
         scanTask?.cancel()
         duplicateTask?.cancel()
+        junkTask?.cancel()
     }
 
-    func scan() async {
-        guard !isScanning else { return }
+    /// Tarama tamamlanırsa true, durdurulursa false döner.
+    @discardableResult
+    func scan() async -> Bool {
+        guard !isScanning else { return false }
         let root = scanRoot
         isScanning = true
         scanProgress = ScanProgress(files: 0, bytes: 0, currentPath: root.path)
@@ -170,7 +218,7 @@ final class AppState: ObservableObject {
 
         if task.isCancelled {
             showToast("Tarama durduruldu.")
-            return
+            return false
         }
         rootNode = result.root
         currentNode = result.root
@@ -181,11 +229,12 @@ final class AppState: ObservableObject {
         lastScan = ScanSummary(root: root, totalFiles: result.totalFiles, unreadable: result.unreadable,
                                duration: result.duration, date: Date())
         refreshDisk()
+        return true
     }
 
     func findDuplicates() async {
         guard !isFindingDuplicates else { return }
-        if rootNode == nil { await scan() }
+        if rootNode == nil { guard await scan() else { return } }
         guard rootNode != nil else { return }
 
         isFindingDuplicates = true
@@ -209,16 +258,20 @@ final class AppState: ObservableObject {
     func scanJunk() async {
         guard !isScanningJunk else { return }
         isScanningJunk = true
-        let categories = await Task.detached(priority: .userInitiated) { await JunkScanner.scanAll() }.value
-        junkCategories = categories
-        junkReady = true
+        let task = Task.detached(priority: .userInitiated) { await JunkScanner.scanAll() }
+        junkTask = task
+        let categories = await task.value
+        junkTask = nil
         isScanningJunk = false
+        guard !task.isCancelled else { return }
+        junkCategories = categories.map(withoutExcluded)
+        junkReady = true
     }
 
     func refreshJunkCategory(_ id: String) async {
         let category = await Task.detached(priority: .utility) { JunkScanner.scan(id: id) }.value
         if let category, let i = junkCategories.firstIndex(where: { $0.id == id }) {
-            junkCategories[i] = category
+            junkCategories[i] = withoutExcluded(category)
         }
     }
 
@@ -226,17 +279,19 @@ final class AppState: ObservableObject {
     func runFullAnalysis() async {
         guard !isAnalyzing else { return }
         isAnalyzing = true
+        analysisCancelled = false
         defer {
             isAnalyzing = false
             analysisStep = ""
         }
         analysisStep = "Önbellekler ve gereksiz dosyalar aranıyor…"
         await scanJunk()
+        guard !analysisCancelled else { return }
         analysisStep = "\(scanRoot.abbreviatedPath) klasörü taranıyor…"
-        await scan()
-        guard rootNode != nil, lastScan?.root == scanRoot else { return }
+        guard await scan(), !analysisCancelled else { return }
         analysisStep = "Tekrarlanan dosyalar karşılaştırılıyor…"
         await findDuplicates()
+        guard !analysisCancelled else { return }
         lastAnalysis = Date()
         refreshDisk()
     }
@@ -248,18 +303,28 @@ final class AppState: ObservableObject {
     func remove(_ targets: [RemovalTarget], permanently: Bool) async -> OperationResult {
         guard !targets.isEmpty, !isRemoving else { return OperationResult() }
         isRemoving = true
+        let excluded = excludedPaths
         let result = await Task.detached(priority: .userInitiated) { () -> OperationResult in
             var r = OperationResult()
             let fm = FileManager()
             for t in targets {
+                if let reason = Self.safetyProblem(for: t, excluded: excluded, fm: fm) {
+                    r.skipped.append("\(t.url.lastPathComponent): \(reason)")
+                    continue
+                }
                 do {
+                    var trashURL: URL?
                     if permanently {
                         try fm.removeItem(at: t.url)
                     } else {
-                        try fm.trashItem(at: t.url, resultingItemURL: nil)
+                        var out: NSURL?
+                        try fm.trashItem(at: t.url, resultingItemURL: &out)
+                        trashURL = out as URL?
                     }
                     r.succeeded.append(t.url)
                     r.freed += t.size
+                    r.records.append(HistoryRecord(originalPath: t.url.path, trashPath: trashURL?.path,
+                                                   size: t.size, date: Date()))
                 } catch {
                     r.failed.append(t.url.lastPathComponent)
                 }
@@ -267,6 +332,10 @@ final class AppState: ObservableObject {
             return r
         }.value
         isRemoving = false
+        if !result.records.isEmpty {
+            history.insert(contentsOf: result.records.reversed(), at: 0)
+            saveHistory()
+        }
         // Sembolik bağlantılı yollar (/var ↔ /private/var) için iki biçimi de eşleştir.
         var removedPaths = Set<String>()
         for url in result.succeeded {
@@ -283,8 +352,11 @@ final class AppState: ObservableObject {
         if !result.succeeded.isEmpty {
             let verb = permanently ? "kalıcı olarak silindi" : "Çöp Kutusu'na taşındı"
             var message = "\(result.succeeded.count) öğe \(verb) · \(result.freed.formattedBytes)"
-            if !result.failed.isEmpty { message += " · \(result.failed.count) öğe atlandı (izin yok ya da kullanımda)" }
+            let notDone = result.failed.count + result.skipped.count
+            if notDone > 0 { message += " · \(notDone) öğe atlandı" }
             showToast(message)
+        } else if !result.skipped.isEmpty {
+            showToast("Güvenlik kontrolü: \(result.skipped.first!)\(result.skipped.count > 1 ? " (+\(result.skipped.count - 1))" : "")", isError: true)
         } else if !result.failed.isEmpty {
             showToast("Öğeler silinemedi: izin yok ya da kullanımda olabilir.", isError: true)
         }
@@ -298,6 +370,115 @@ final class AppState: ObservableObject {
         let permanent = category.permanentOnly || UserDefaults.standard.bool(forKey: "permanentDelete")
         await remove(category.items.map { RemovalTarget(url: $0.url, size: $0.size) }, permanently: permanent)
     }
+
+    /// Silmeden hemen önce yapılan güvenlik kontrolü. Sorun yoksa nil döner.
+    nonisolated static func safetyProblem(for t: RemovalTarget, excluded: [String], fm: FileManager) -> String? {
+        let path = t.url.path
+        if excluded.contains(where: { path == $0 || path.hasPrefix($0 + "/") }) {
+            return "hariç tutulanlar listesinde"
+        }
+        var st = stat()
+        guard lstat(path, &st) == 0 else { return "artık mevcut değil" }
+        if let expected = t.expectedModified {
+            let current = (try? t.url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+            if let current, abs(current.timeIntervalSince(expected)) > 1 {
+                return "taramadan sonra değiştirilmiş, yeniden tara"
+            }
+        }
+        if !t.keepAnyOf.isEmpty, !t.keepAnyOf.contains(where: { fm.fileExists(atPath: $0.path) }) {
+            return "korunacak kopya artık yok, bu dosya son kopya olabilir"
+        }
+        return nil
+    }
+
+    // MARK: - Geçmiş
+
+    /// Çöp Kutusu'na taşınan öğeyi eski yerine geri koyar.
+    func restore(_ record: HistoryRecord) {
+        guard let trashPath = record.trashPath, !record.restored else { return }
+        let fm = FileManager.default
+        let original = URL(fileURLWithPath: record.originalPath)
+        guard fm.fileExists(atPath: trashPath) else {
+            showToast("\(record.name) Çöp Kutusu'nda bulunamadı (çöp boşaltılmış olabilir).", isError: true)
+            return
+        }
+        guard !fm.fileExists(atPath: original.path) else {
+            showToast("Eski konumda aynı adla bir öğe var: \(original.abbreviatedPath)", isError: true)
+            return
+        }
+        do {
+            try fm.createDirectory(at: original.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try fm.moveItem(at: URL(fileURLWithPath: trashPath), to: original)
+            if let i = history.firstIndex(where: { $0.id == record.id }) { history[i].restored = true }
+            saveHistory()
+            showToast("\(record.name) geri alındı. Listeleri güncellemek için yeniden tarayabilirsin.")
+            refreshDisk()
+            if junkReady { Task { await refreshJunkCategory("trash") } }
+        } catch {
+            showToast("Geri alınamadı: \(error.localizedDescription)", isError: true)
+        }
+    }
+
+    func isInTrash(_ record: HistoryRecord) -> Bool {
+        guard let p = record.trashPath, !record.restored else { return false }
+        return FileManager.default.fileExists(atPath: p)
+    }
+
+    func clearHistory() {
+        history = []
+        saveHistory()
+    }
+
+    private func saveHistory() {
+        let records = Array(history.prefix(2000))
+        let url = historyURL
+        Task.detached(priority: .utility) {
+            try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            if let data = try? JSONEncoder().encode(records) { try? data.write(to: url, options: .atomic) }
+        }
+    }
+
+    // MARK: - Hariç tutulanlar
+
+    func isExcluded(_ path: String) -> Bool {
+        excludedPaths.contains { path == $0 || path.hasPrefix($0 + "/") }
+    }
+
+    func addExclusion(_ url: URL) {
+        let path = url.path
+        guard !isExcluded(path) else { return }
+        excludedPaths.removeAll { $0.hasPrefix(path + "/") }
+        excludedPaths.append(path)
+        excludedPaths.sort()
+        UserDefaults.standard.set(excludedPaths, forKey: "excludedPaths")
+        junkCategories = junkCategories.map(withoutExcluded)
+        showToast("\(url.abbreviatedPath) artık önerilerde ve silme işlemlerinde yok sayılacak.")
+    }
+
+    func removeExclusion(_ path: String) {
+        excludedPaths.removeAll { $0 == path }
+        UserDefaults.standard.set(excludedPaths, forKey: "excludedPaths")
+    }
+
+    func chooseExclusion() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = true
+        panel.allowsMultipleSelection = true
+        panel.prompt = "Hariç Tut"
+        panel.message = "Temizlik önerilerinden korunacak klasör ya da dosyaları seç"
+        guard panel.runModal() == .OK else { return }
+        panel.urls.forEach(addExclusion)
+    }
+
+    private func withoutExcluded(_ c: JunkCategory) -> JunkCategory {
+        var c = c
+        c.items.removeAll { isExcluded($0.id) }
+        return c
+    }
+
+    /// Hariç tutulanlar dışındaki proje bağımlılık klasörleri.
+    var visibleDevArtifacts: [FileNode] { devArtifacts.filter { !isExcluded($0.url.path) } }
 
     private func applyRemoval(_ removed: Set<String>) {
         guard !removed.isEmpty else { return }

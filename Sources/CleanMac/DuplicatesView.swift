@@ -1,3 +1,4 @@
+import QuickLook
 import SwiftUI
 
 struct DuplicatesView: View {
@@ -6,6 +7,7 @@ struct DuplicatesView: View {
     @State private var showProtected = false
     @State private var confirm = false
     @State private var warning: String?
+    @State private var previewURL: URL?
 
     private static let sizeOptions: [(String, Int64)] = [
         ("1 MB", 1_000_000), ("10 MB", 10_000_000), ("50 MB", 50_000_000), ("100 MB", 100_000_000),
@@ -13,7 +15,7 @@ struct DuplicatesView: View {
 
     private var groups: [DuplicateGroup] {
         state.duplicateGroups.compactMap { g in
-            let files = showProtected ? g.files : g.files.filter { !$0.isProtected }
+            let files = g.files.filter { (showProtected || !$0.isProtected) && !state.isExcluded($0.id) }
             return files.count > 1 ? DuplicateGroup(id: g.id, size: g.size, files: files) : nil
         }
     }
@@ -93,7 +95,13 @@ struct DuplicatesView: View {
         }
         .confirmationDialog("\(selectedFiles.count) kopya Çöp Kutusu'na taşınsın mı?", isPresented: $confirm) {
             Button("Çöp Kutusu'na Taşı (\(selectedSize.formattedBytes))", role: .destructive) {
-                let targets = selectedFiles.map { RemovalTarget(url: $0.url, size: $0.size) }
+                // Her silinen kopya için, aynı gruptaki seçilmemiş kopyalardan en az birinin hâlâ var olması şart.
+                let targets = groups.flatMap { g -> [RemovalTarget] in
+                    let keep = g.files.filter { !selected.contains($0.id) }.map(\.url)
+                    return g.files.filter { selected.contains($0.id) }.map {
+                        RemovalTarget(url: $0.url, size: $0.size, expectedModified: $0.modified, keepAnyOf: keep)
+                    }
+                }
                 selected = []
                 Task { await state.remove(targets, permanently: false) }
             }
@@ -101,6 +109,7 @@ struct DuplicatesView: View {
         } message: {
             Text("Her gruptan en az bir kopya korunacak. Dosyalar Çöp Kutusu'ndan geri alınabilir.")
         }
+        .quickLookPreview($previewURL)
         .alert("Dikkat", isPresented: Binding(get: { warning != nil }, set: { if !$0 { warning = nil } })) {
             Button("Tamam") {}
         } message: {
@@ -128,11 +137,20 @@ struct DuplicatesView: View {
             Spacer()
             Text(f.modified?.formatted(date: .abbreviated, time: .shortened) ?? "")
                 .font(.caption).foregroundStyle(.secondary)
+            Button { previewURL = f.url } label: { Image(systemName: "eye") }
+                .buttonStyle(.borderless)
+                .help("Hızlı Bakış")
             Button { Finder.reveal([f.url]) } label: { Image(systemName: "magnifyingglass") }
                 .buttonStyle(.borderless)
                 .help("Finder'da göster")
         }
         .padding(.vertical, 2)
+        .contextMenu {
+            Button("Hızlı Bakış") { previewURL = f.url }
+            Button("Finder'da Göster") { Finder.reveal([f.url]) }
+            Button("Hariç Tut") { state.addExclusion(f.url) }
+            Button("Klasörünü Hariç Tut") { state.addExclusion(f.url.deletingLastPathComponent()) }
+        }
     }
 
     private func smartSelect(_ groups: [DuplicateGroup]) {

@@ -49,6 +49,30 @@ final class CleanMacTests: XCTestCase {
         XCTAssertFalse(try XCTUnwrap(result.files.first { $0.name == "big.mov" }).isProtected)
     }
 
+    func testParallelScanSizesAreConsistentAtEveryDepth() throws {
+        // splitDepth'ten derin klasörler: bölünen ve özyinelemeli taranan kısımlar birlikte doğru toplanmalı.
+        for i in 0..<3 {
+            try makeFile("a\(i)/b/c/d/e/f/g/deep\(i).bin", bytes: 1_200_000)
+            try makeFile("a\(i)/b/c/mid.txt", bytes: 5_000)
+            try makeFile("a\(i)/top.bin", bytes: 2_000_000)
+        }
+        try makeFile("a0/b/c/d/node_modules/x/lib.js", bytes: 1_100_000)
+        let result = DiskScanner { _ in }.scan(root: root)
+        XCTAssertEqual(result.totalFiles, 10)
+        XCTAssertEqual(result.files.count, 7)
+        XCTAssertEqual(result.devArtifacts.count, 1)
+
+        func check(_ n: FileNode) {
+            guard n.isDirectory else { return }
+            XCTAssertEqual(n.size, n.children.reduce(0) { $0 + $1.size }, n.url.path)
+            XCTAssertEqual(n.fileCount, n.children.reduce(0) { $0 + $1.fileCount }, n.url.path)
+            XCTAssertEqual(n.children.map(\.size), n.children.map(\.size).sorted(by: >), "sıralı olmalı")
+            n.children.forEach(check)
+        }
+        check(result.root)
+        XCTAssertEqual(result.root.fileCount, 10)
+    }
+
     func testDuplicateFinderMatchesContentNotJustSize() throws {
         let a = try makeFile("a/photo.jpg", bytes: 2_500_000)
         try makeFile("b/photo copy.jpg", bytes: 2_500_000)
@@ -83,7 +107,7 @@ final class CleanMacTests: XCTestCase {
         try makeFile("proj/node_modules/lib.js", bytes: 1_200_000)
         try makeFile("Movies/clip.mov", bytes: 4_000_000)
 
-        let state = AppState()
+        let state = AppState(historyURL: root.appendingPathComponent("history.json"))
         state.scanRoot = root
         await state.scan()
         await state.findDuplicates()
@@ -109,14 +133,58 @@ final class CleanMacTests: XCTestCase {
     }
 
     @MainActor
-    func testMoveToTrashForTestFile() async throws {
-        // Kullanıcının Çöp Kutusu'na dosya bırakır; yalnızca istenirse çalışır: CLEANMAC_TRASH_TEST=1
-        try XCTSkipUnless(ProcessInfo.processInfo.environment["CLEANMAC_TRASH_TEST"] == "1")
+    func testMoveToTrashRecordsHistoryAndRestores() async throws {
         let file = try makeFile("CleanMac-test-trash.bin", bytes: 10_000)
-        let state = AppState()
+        let state = AppState(historyURL: root.appendingPathComponent("history.json"))
         let result = await state.remove([RemovalTarget(url: file, size: 10_000)], permanently: false)
         XCTAssertEqual(result.succeeded.count, 1)
         XCTAssertFalse(FileManager.default.fileExists(atPath: file.path))
+        let record = try XCTUnwrap(state.history.first)
+        XCTAssertNotNil(record.trashPath)
+        XCTAssertTrue(state.isInTrash(record))
+
+        // Geri al: dosya eski yerine dönmeli, Çöp Kutusu'nda iz kalmamalı.
+        state.restore(record)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: file.path))
+        XCTAssertTrue(state.history.first!.restored)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: record.trashPath!))
+    }
+
+    @MainActor
+    func testRemovalSafetyChecks() async throws {
+        let changed = try makeFile("changed.bin", bytes: 1_000)
+        let lastCopy = try makeFile("dups/copy.bin", bytes: 1_000)
+        let excluded = try makeFile("keep/important.bin", bytes: 1_000)
+        let state = AppState(historyURL: root.appendingPathComponent("history.json"))
+        state.addExclusion(excluded.deletingLastPathComponent())
+
+        let result = await state.remove([
+            // Taramadaki tarih farklı → dosya sonradan değişmiş.
+            RemovalTarget(url: changed, size: 1_000, expectedModified: Date(timeIntervalSince1970: 0)),
+            // Korunacak kopya artık yok → son kopya silinmemeli.
+            RemovalTarget(url: lastCopy, size: 1_000, keepAnyOf: [root.appendingPathComponent("dups/gone.bin")]),
+            // Hariç tutulan klasörde.
+            RemovalTarget(url: excluded, size: 1_000),
+            // Zaten yok.
+            RemovalTarget(url: root.appendingPathComponent("missing.bin"), size: 1_000),
+        ], permanently: true)
+
+        XCTAssertTrue(result.succeeded.isEmpty)
+        XCTAssertEqual(result.skipped.count, 4)
+        for f in [changed, lastCopy, excluded] {
+            XCTAssertTrue(FileManager.default.fileExists(atPath: f.path), f.lastPathComponent)
+        }
+        state.removeExclusion(excluded.deletingLastPathComponent().path)
+    }
+
+    func testPackageRootIsProtected() throws {
+        let pkg = root.appendingPathComponent("Test.app")
+        try makeFile("Test.app/Contents/MacOS/big.bin", bytes: 1_500_000)
+        XCTAssertTrue(DiskScanner.isProtectedRoot(pkg))
+        XCTAssertTrue(DiskScanner.isProtectedRoot(pkg.appendingPathComponent("Contents")))
+        XCTAssertFalse(DiskScanner.isProtectedRoot(root))
+        let result = DiskScanner { _ in }.scan(root: pkg)
+        XCTAssertTrue(result.files.allSatisfy(\.isProtected))
     }
 
     func testJunkScannerRunsAndIsReadOnly() async throws {
@@ -133,7 +201,8 @@ final class CleanMacTests: XCTestCase {
 final class BenchmarkTests: XCTestCase {
     func testHomeScanPerformance() async throws {
         try XCTSkipUnless(ProcessInfo.processInfo.environment["CLEANMAC_BENCH"] == "1")
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        let path = ProcessInfo.processInfo.environment["CLEANMAC_BENCH_ROOT"]
+        let home = path.map { URL(fileURLWithPath: $0) } ?? FileManager.default.homeDirectoryForCurrentUser
         let result = DiskScanner { _ in }.scan(root: home)
         print("[bench] \(result.totalFiles) dosya, \(result.root.size.formattedBytes), \(result.files.count) büyük dosya, \(result.devArtifacts.count) bağımlılık klasörü, \(result.unreadable) okunamayan, \(String(format: "%.1f", result.duration)) sn")
         for c in result.root.children.prefix(8) { print("[bench]   \(c.name): \(c.size.formattedBytes)") }

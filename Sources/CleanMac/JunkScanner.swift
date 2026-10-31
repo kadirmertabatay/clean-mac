@@ -28,6 +28,8 @@ struct JunkCategory: Identifiable {
     /// Çöp Kutusu gibi yalnızca kalıcı silinebilen kategoriler.
     let permanentOnly: Bool
     var items: [JunkItem]
+    /// Var olan ama izin olmadığı için okunamayan konumlar.
+    var deniedPaths: [String] = []
     var size: Int64 { items.reduce(0) { $0 + $1.size } }
 }
 
@@ -117,7 +119,8 @@ enum JunkScanner {
     }
 
     static func scan(_ d: Definition) -> JunkCategory {
-        var items = candidates(for: d.source).compactMap { url -> JunkItem? in
+        let (urls, denied) = candidates(for: d.source)
+        var items = urls.compactMap { url -> JunkItem? in
             let size = DiskScanner.allocatedSize(of: url)
             guard size > 0 else { return nil }
             let rv = try? url.resourceValues(forKeys: [.contentModificationDateKey, .addedToDirectoryDateKey])
@@ -125,30 +128,40 @@ enum JunkScanner {
         }
         items.sort { $0.size > $1.size }
         return JunkCategory(id: d.id, title: d.title, detail: d.detail, icon: d.icon, safety: d.safety,
-                            permanentOnly: d.permanentOnly, items: items)
+                            permanentOnly: d.permanentOnly, items: items, deniedPaths: denied)
     }
 
     static func expand(_ p: String) -> String {
         p.hasPrefix("~") ? home + String(p.dropFirst()) : p
     }
 
-    private static func candidates(for source: Source) -> [URL] {
+    private static func candidates(for source: Source) -> ([URL], [String]) {
         let fm = FileManager()
         let ignored: Set<String> = [".DS_Store", ".localized"]
+        var denied: [String] = []
+
+        func children(of path: String, keys: [URLResourceKey]? = nil, options: FileManager.DirectoryEnumerationOptions = []) -> [URL] {
+            let url = URL(fileURLWithPath: path)
+            guard fm.fileExists(atPath: path) else { return [] }
+            do {
+                return try fm.contentsOfDirectory(at: url, includingPropertiesForKeys: keys, options: options)
+            } catch {
+                denied.append(path)
+                return []
+            }
+        }
+
         switch source {
         case .paths(let paths):
-            return paths.map { URL(fileURLWithPath: expand($0)) }.filter { fm.fileExists(atPath: $0.path) }
+            return (paths.map { URL(fileURLWithPath: expand($0)) }.filter { fm.fileExists(atPath: $0.path) }, [])
         case .childrenOf(let paths):
-            return paths.flatMap { p -> [URL] in
-                (try? fm.contentsOfDirectory(at: URL(fileURLWithPath: expand(p)),
-                                             includingPropertiesForKeys: nil, options: [])) ?? []
-            }.filter { !ignored.contains($0.lastPathComponent) }
+            let urls = paths.flatMap { children(of: expand($0)) }.filter { !ignored.contains($0.lastPathComponent) }
+            return (urls, denied)
         case .downloads(let installers):
-            let dl = URL(fileURLWithPath: expand("~/Downloads"))
             let keys: [URLResourceKey] = [.addedToDirectoryDateKey, .contentModificationDateKey]
-            let all = (try? fm.contentsOfDirectory(at: dl, includingPropertiesForKeys: keys, options: [.skipsHiddenFiles])) ?? []
+            let all = children(of: expand("~/Downloads"), keys: keys, options: [.skipsHiddenFiles])
             let cutoff = Date().addingTimeInterval(-Double(oldDownloadDays) * 86_400)
-            return all.filter { url in
+            let urls = all.filter { url in
                 let isInstaller = installerExtensions.contains(url.pathExtension.lowercased())
                 if installers { return isInstaller }
                 guard !isInstaller else { return false }
@@ -156,6 +169,7 @@ enum JunkScanner {
                 let date = rv?.addedToDirectoryDate ?? rv?.contentModificationDate ?? Date()
                 return date < cutoff
             }
+            return (urls, denied)
         }
     }
 }

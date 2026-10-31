@@ -14,7 +14,7 @@ struct OverviewView: View {
                              note: state.junkReady ? "Önbellek, günlük, indirmeler" : "Henüz taranmadı") {
                         state.section = .junk
                     }
-                    let big = state.files.filter { $0.size >= 100_000_000 && !$0.isProtected }
+                    let big = state.files.filter { $0.size >= 100_000_000 && !$0.isProtected && !state.isExcluded($0.id) }
                     StatCard(icon: "doc.badge.arrow.up", color: .blue, title: "Büyük Dosyalar (>100 MB)",
                              value: state.rootNode == nil ? "—" : big.reduce(Int64(0)) { $0 + $1.size }.formattedBytes,
                              note: state.rootNode == nil ? "Henüz taranmadı" : "\(big.count) dosya") {
@@ -27,7 +27,7 @@ struct OverviewView: View {
                     }
                     StatCard(icon: "shippingbox", color: .teal, title: "Proje Bağımlılıkları",
                              value: state.rootNode == nil ? "—" : state.devArtifactTotal.formattedBytes,
-                             note: state.rootNode == nil ? "Henüz taranmadı" : "\(state.devArtifacts.count) klasör (node_modules vb.)") {
+                             note: state.rootNode == nil ? "Henüz taranmadı" : "\(state.visibleDevArtifacts.count) klasör (node_modules vb.)") {
                         state.section = .junk
                     }
                 }

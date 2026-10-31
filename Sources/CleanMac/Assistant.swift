@@ -40,12 +40,14 @@ extension AppState {
 
     var staleLargeFiles: [FileEntry] {
         let cutoff = Date().addingTimeInterval(-Double(Self.staleDays) * 86_400)
-        return files.filter { !$0.isProtected && $0.size >= 100_000_000 && ($0.lastUsed ?? .distantPast) < cutoff }
+        return files.filter {
+            !$0.isProtected && !isExcluded($0.id) && $0.size >= 100_000_000 && ($0.lastUsed ?? .distantPast) < cutoff
+        }
     }
 
     var visibleDuplicateWaste: Int64 {
         duplicateGroups.reduce(0) { total, g in
-            let n = g.files.filter { !$0.isProtected }.count
+            let n = g.files.filter { !$0.isProtected && !isExcluded($0.id) }.count
             return total + g.size * Int64(max(n - 1, 0))
         }
     }
@@ -58,7 +60,7 @@ extension AppState {
         junkCategories.filter { $0.safety == .review }.reduce(0) { $0 + $1.size }
     }
 
-    var devArtifactTotal: Int64 { devArtifacts.reduce(0) { $0 + $1.size } }
+    var devArtifactTotal: Int64 { visibleDevArtifacts.reduce(0) { $0 + $1.size } }
 
     var hasAnalysisData: Bool { junkReady || rootNode != nil }
 
@@ -106,7 +108,7 @@ extension AppState {
         if rootNode != nil {
             if devArtifactTotal >= 200_000_000 {
                 recs.append(.init(id: "dev", level: .suggestion, icon: "shippingbox.fill",
-                                  title: "\(devArtifacts.count) proje bağımlılık klasörü: \(devArtifactTotal.formattedBytes)",
+                                  title: "\(visibleDevArtifacts.count) proje bağımlılık klasörü: \(devArtifactTotal.formattedBytes)",
                                   detail: "node_modules, .venv, Pods gibi klasörler. Üzerinde çalışmadığın projelerinkini silebilirsin; gerektiğinde npm install / pip install ile geri gelir.",
                                   size: devArtifactTotal, action: .open(.junk), actionTitle: "İncele"))
             }
@@ -118,7 +120,7 @@ extension AppState {
                                   detail: "Uzun süredir açılmayan 100 MB üzeri dosyalar. Harici diske ya da buluta taşımayı düşünebilirsin.",
                                   size: total, action: .openStaleLargeFiles, actionTitle: "Göster"))
             }
-            let huge = files.filter { !$0.isProtected && $0.size >= 1_000_000_000 }.sorted { $0.size > $1.size }
+            let huge = files.filter { !$0.isProtected && !isExcluded($0.id) && $0.size >= 1_000_000_000 }.sorted { $0.size > $1.size }
             if !huge.isEmpty {
                 let names = huge.prefix(3).map { "\($0.name) (\($0.size.formattedBytes))" }.joined(separator: ", ")
                 recs.append(.init(id: "huge", level: .info, icon: "doc.badge.arrow.up",
@@ -132,6 +134,16 @@ extension AppState {
                                   detail: "\(top.size.formattedBytes) · \(top.fileCount.formatted()) dosya. İçine bakıp neyin büyüdüğünü görebilirsin.",
                                   size: top.size, action: .openFolder(top), actionTitle: "Aç"))
             }
+        }
+
+        // Tüm Mac tarandığında, taramanın göremediği alanı açıkla.
+        if let root = rootNode, root.url.path == "/", let d = disk, d.used - root.size > 5_000_000_000 {
+            let hidden = d.used - root.size
+            recs.append(.init(id: "hidden", level: .info, icon: "eye.slash",
+                              title: "\(hidden.formattedBytes) taramada görünmüyor",
+                              detail: "Bu alan genellikle Time Machine yerel anlık görüntüleri, macOS'un temizlenebilir (purgeable) verileri, sistem birimleri ya da izin olmadığı için okunamayan klasörlerdir (\(lastScan?.unreadable ?? 0) klasör okunamadı). Tam Disk Erişimi vermek ve `tmutil listlocalsnapshots /` komutuna bakmak yardımcı olur.",
+                              size: hidden, action: hasFullDiskAccess ? .storageSettings : .fullDiskAccess,
+                              actionTitle: hasFullDiskAccess ? "Depolama Ayarları" : "Tam Disk Erişimi"))
         }
 
         if duplicatesReady, visibleDuplicateWaste >= 50_000_000 {
@@ -212,15 +224,9 @@ struct AssistantView: View {
                     .controlSize(.large)
                     .disabled(state.isAnalyzing || state.isScanning)
 
-                    Button("Farklı klasör seç…") {
-                        if state.chooseScanRoot() { Task { await state.runFullAnalysis() } }
-                    }
-                    .controlSize(.large)
-                    .disabled(state.isAnalyzing || state.isScanning)
-
-                    Text("Taranacak: \(state.scanRoot.abbreviatedPath)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    Text("Kapsam:").foregroundStyle(.secondary).padding(.leading, 6)
+                    ScanScopeMenu()
+                        .controlSize(.large)
                 }
                 .padding(.top, 4)
             }

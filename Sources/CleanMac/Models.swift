@@ -173,10 +173,40 @@ struct DiskInfo {
 struct RemovalTarget {
     let url: URL
     let size: Int64
+    /// Taramadaki değiştirilme tarihi; dosya o zamandan beri değiştiyse silinmez.
+    var expectedModified: Date?
+    /// Boş değilse, silmeden önce bunlardan en az birinin hâlâ var olması gerekir (tekrarlarda korunan kopya).
+    var keepAnyOf: [URL] = []
 }
 
 struct OperationResult {
     var succeeded: [URL] = []
     var failed: [String] = []
+    /// Taramadan sonra değiştiği ya da güvenlik kontrolünden geçemediği için atlananlar.
+    var skipped: [String] = []
     var freed: Int64 = 0
+    var records: [HistoryRecord] = []
+}
+
+/// Temizlik geçmişindeki tek bir kayıt.
+struct HistoryRecord: Codable, Identifiable, Hashable {
+    var id = UUID()
+    let originalPath: String
+    /// Çöp Kutusu'ndaki konumu; kalıcı silinenlerde nil.
+    let trashPath: String?
+    let size: Int64
+    let date: Date
+    var restored = false
+
+    var name: String { URL(fileURLWithPath: originalPath).lastPathComponent }
+    var isPermanent: Bool { trashPath == nil }
+}
+
+extension FileManager {
+    /// Dosyanın yalnızca bulutta (iCloud) durup durmadığı; bu dosyaları okumak indirmeyi tetikler.
+    static func isDataless(_ path: String) -> Bool {
+        var st = stat()
+        guard lstat(path, &st) == 0 else { return false }
+        return (st.st_flags & UInt32(SF_DATALESS)) != 0 || (st.st_blocks == 0 && st.st_size > 0)
+    }
 }

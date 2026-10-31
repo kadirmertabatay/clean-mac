@@ -19,7 +19,7 @@ struct JunkView: View {
                 out.append(Target(target: RemovalTarget(url: i.url, size: i.size), permanentOnly: c.permanentOnly))
             }
         }
-        for n in state.devArtifacts where selected.contains(n.url.path) {
+        for n in state.visibleDevArtifacts where selected.contains(n.url.path) {
             out.append(Target(target: RemovalTarget(url: n.url, size: n.size), permanentOnly: false))
         }
         return out
@@ -137,6 +137,13 @@ struct JunkView: View {
                         .buttonStyle(.borderless)
                 }
                 .padding(.leading, 8)
+                .contextMenu {
+                    Button("Finder'da Göster") { Finder.reveal([item.url]) }
+                    Button("Hariç Tut (önerme, silme)") {
+                        selected.remove(item.id)
+                        state.addExclusion(item.url)
+                    }
+                }
             }
             if c.items.count > 300 {
                 Text("… ve \(c.items.count - 300) öğe daha (kategori seçildiğinde hepsi dahil edilir)")
@@ -158,7 +165,15 @@ struct JunkView: View {
                     Text(c.detail).font(.caption).foregroundStyle(.secondary).lineLimit(2)
                 }
                 Spacer()
-                if c.items.isEmpty {
+                if c.items.isEmpty && !c.deniedPaths.isEmpty {
+                    Button {
+                        Finder.openFullDiskAccessSettings()
+                    } label: {
+                        Label("İzin yok", systemImage: "lock.fill").font(.callout).foregroundStyle(.orange)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Bu konum okunamadı. Görmek için CleanMac'e Tam Disk Erişimi ver. (Tıkla: ayarları aç)")
+                } else if c.items.isEmpty {
                     Label("Temiz", systemImage: "checkmark").font(.callout).foregroundStyle(.green)
                 } else {
                     VStack(alignment: .trailing, spacing: 2) {
@@ -177,9 +192,9 @@ struct JunkView: View {
                 Text("node_modules, .venv, Pods gibi klasörleri bulmak için önce Klasör Gezgini'nden bir tarama yap.")
                     .foregroundStyle(.secondary)
             }
-        } else if !state.devArtifacts.isEmpty {
+        } else if !state.visibleDevArtifacts.isEmpty {
             Section {
-                ForEach(state.devArtifacts) { node in
+                ForEach(state.visibleDevArtifacts) { node in
                     HStack(spacing: 10) {
                         Checkbox(state: selected.contains(node.url.path) ? .on : .off) { toggleItem(node.url.path) }
                         Image(systemName: "shippingbox").foregroundStyle(.teal).frame(width: 18)
@@ -192,6 +207,13 @@ struct JunkView: View {
                         Text(node.size.formattedBytes).monospacedDigit().frame(width: 80, alignment: .trailing)
                         Button { Finder.reveal([node.url]) } label: { Image(systemName: "magnifyingglass") }
                             .buttonStyle(.borderless)
+                    }
+                    .contextMenu {
+                        Button("Finder'da Göster") { Finder.reveal([node.url]) }
+                        Button("Projeyi Hariç Tut (aktif proje)") {
+                            selected.remove(node.url.path)
+                            state.addExclusion(node.url.deletingLastPathComponent())
+                        }
                     }
                 }
             } header: {

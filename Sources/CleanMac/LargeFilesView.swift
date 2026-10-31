@@ -1,3 +1,4 @@
+import QuickLook
 import SwiftUI
 
 struct LargeFilesView: View {
@@ -9,6 +10,7 @@ struct LargeFilesView: View {
     @State private var selection = Set<FileEntry.ID>()
     @State private var sortOrder = [KeyPathComparator(\FileEntry.size, order: .reverse)]
     @State private var confirm = false
+    @State private var previewURL: URL?
 
     private static let sizeOptions: [(String, Int64)] = [
         ("10 MB", 10_000_000), ("50 MB", 50_000_000), ("100 MB", 100_000_000),
@@ -20,6 +22,7 @@ struct LargeFilesView: View {
         return state.files.filter { f in
             f.size >= minSize
                 && (showProtected || !f.isProtected)
+                && !state.isExcluded(f.id)
                 && (kind == nil || f.kind == kind)
                 && (search.isEmpty || f.name.localizedCaseInsensitiveContains(search))
                 && (!state.largeFilesStaleOnly || (f.lastUsed ?? .distantPast) < cutoff)
@@ -78,9 +81,17 @@ struct LargeFilesView: View {
                 .contextMenu(forSelectionType: FileEntry.ID.self) { ids in
                     let urls = items.filter { ids.contains($0.id) }.map(\.url)
                     if !urls.isEmpty {
-                        if urls.count == 1, let u = urls.first { Button("Aç") { Finder.open(u) } }
+                        if urls.count == 1, let u = urls.first {
+                            Button("Hızlı Bakış") { previewURL = u }
+                            Button("Aç") { Finder.open(u) }
+                        }
                         Button("Finder'da Göster") { Finder.reveal(urls) }
                         Button("Yolu Kopyala") { Finder.copyPaths(urls) }
+                        Divider()
+                        Button("Hariç Tut (önerme, silme)") { urls.forEach(state.addExclusion) }
+                        if urls.count == 1, let u = urls.first {
+                            Button("Klasörünü Hariç Tut") { state.addExclusion(u.deletingLastPathComponent()) }
+                        }
                         Divider()
                         Button("Çöp Kutusu'na Taşı…", role: .destructive) {
                             selection = Set(urls.map(\.path))
@@ -91,6 +102,12 @@ struct LargeFilesView: View {
                     Finder.reveal(items.filter { ids.contains($0.id) }.map(\.url))
                 }
                 .onDeleteCommand { if !selected.isEmpty { confirm = true } }
+                .onKeyPress(.space) {
+                    guard let first = selected.first else { return .ignored }
+                    previewURL = first.url
+                    return .handled
+                }
+                .quickLookPreview($previewURL)
                 Divider()
                 HStack(spacing: 12) {
                     Text("\(items.count.formatted()) dosya · \(items.reduce(Int64(0)) { $0 + $1.size }.formattedBytes)")
@@ -111,7 +128,7 @@ struct LargeFilesView: View {
         }
         .confirmationDialog("\(selected.count) dosya Çöp Kutusu'na taşınsın mı?", isPresented: $confirm) {
             Button("Çöp Kutusu'na Taşı (\(selectedSize.formattedBytes))", role: .destructive) {
-                let targets = selected.map { RemovalTarget(url: $0.url, size: $0.size) }
+                let targets = selected.map { RemovalTarget(url: $0.url, size: $0.size, expectedModified: $0.modified) }
                 selection = []
                 Task { await state.remove(targets, permanently: false) }
             }

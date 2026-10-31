@@ -132,6 +132,33 @@ struct ScanningView: View {
     }
 }
 
+/// Tarama kapsamı seçici: ana klasör, tüm Mac ya da başka bir klasör.
+struct ScanScopeMenu: View {
+    @EnvironmentObject var state: AppState
+    var onChange: () -> Void = {}
+
+    var body: some View {
+        Menu {
+            Button { select(AppState.home) } label: { Label("Ana Klasör (~)", systemImage: "house") }
+            Button { select(AppState.wholeMac) } label: { Label("Tüm Mac (/)", systemImage: "internaldrive") }
+            Divider()
+            Button {
+                if state.chooseScanRoot() { onChange() }
+            } label: { Label("Farklı Klasör…", systemImage: "folder") }
+        } label: {
+            Label(state.scanScopeTitle, systemImage: state.scanScopeIcon)
+        }
+        .fixedSize()
+        .disabled(state.isScanning || state.isAnalyzing)
+        .help("Taranacak alan: \(state.scanRoot.path)")
+    }
+
+    private func select(_ url: URL) {
+        state.scanRoot = url
+        onChange()
+    }
+}
+
 struct Checkbox: View {
     enum CheckState { case on, off, mixed }
 

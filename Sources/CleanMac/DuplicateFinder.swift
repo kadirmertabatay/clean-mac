@@ -20,6 +20,8 @@ enum DuplicateFinder {
         for e in entries where e.size >= minSize {
             var st = stat()
             guard lstat(e.url.path, &st) == 0, (st.st_mode & S_IFMT) == S_IFREG else { continue }
+            // Yalnızca bulutta duran dosyaları okumak indirmeyi tetikler; atla.
+            guard (st.st_flags & UInt32(SF_DATALESS)) == 0, st.st_blocks > 0 else { continue }
             guard seenInodes.insert("\(st.st_dev):\(st.st_ino)").inserted else { continue }
             bySize[Int64(st.st_size), default: []].append(e)
         }
@@ -60,7 +62,7 @@ enum DuplicateFinder {
     }
 
     static func partialHash(_ url: URL, size: Int64) -> String? {
-        guard let h = try? FileHandle(forReadingFrom: url) else { return nil }
+        guard !FileManager.isDataless(url.path), let h = try? FileHandle(forReadingFrom: url) else { return nil }
         defer { try? h.close() }
         var hasher = SHA256()
         do {
@@ -78,7 +80,7 @@ enum DuplicateFinder {
     }
 
     static func fullHash(_ url: URL) -> String? {
-        guard let h = try? FileHandle(forReadingFrom: url) else { return nil }
+        guard !FileManager.isDataless(url.path), let h = try? FileHandle(forReadingFrom: url) else { return nil }
         defer { try? h.close() }
         var hasher = SHA256()
         while true {
