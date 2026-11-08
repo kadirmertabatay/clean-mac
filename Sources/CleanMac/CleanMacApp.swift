@@ -69,7 +69,7 @@ struct ContentView: View {
                     }
                 }
                 Section("Araçlar") {
-                    ForEach([AppSection.explorer, .largeFiles, .duplicates, .junk, .apps, .developer, .rules]) { s in
+                    ForEach([AppSection.explorer, .largeFiles, .duplicates, .photos, .junk, .apps, .developer, .rules]) { s in
                         Label(s.title, systemImage: s.icon)
                             .badge(badge(for: s))
                             .tag(s)
@@ -94,6 +94,7 @@ struct ContentView: View {
             case .explorer: ExplorerView()
             case .largeFiles: LargeFilesView()
             case .duplicates: DuplicatesView()
+            case .photos: SimilarPhotosView()
             case .junk: JunkView()
             case .apps: AppsView()
             case .developer: DeveloperView()

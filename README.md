@@ -10,8 +10,15 @@ Mac'in depolama alanını analiz eden ve temiz tutmana yardım eden, tamamen yer
 |---|---|
 | **Akıllı Asistan** | Tek tıkla tam analiz (gereksiz dosyalar → klasör taraması → tekrarlar) yapar ve öncelik sırasına göre öneriler sunar: disk doluluğu, temizlenebilir önbellekler, uzun süredir kullanılmayan büyük dosyalar, tekrarlar, proje bağımlılıkları |
 | **Genel Bakış** | Disk doluluğu, özet kartlar, en büyük klasörler |
-| **Klasör Gezgini** | Seçilen klasörün boyut ağacı; çift tıkla içine gir, halka grafikle dağılımı gör, sağ tık ile Finder'da göster / çöpe taşı |
-| **Büyük Dosyalar** | Boyut, tür, son kullanım ve konuma göre sıralanabilen tablo; "6+ ay kullanılmayan" filtresi |
+| **Depolama Dökümü** | APFS birimleri (Veri, Sistem, Preboot, Kurtarma, VM), temizlenebilir alan, taramada görünmeyen alan; yerel Time Machine anlık görüntülerini silme |
+| **Ne Büyüdü?** | Her taramanın özeti saklanır; önceki taramalara göre büyüyen/küçülen klasörler ve yeni büyük dosyalar |
+| **Klasör Gezgini** | Seçilen klasörün boyut ağacı (liste ya da treemap); çift tıkla içine gir, sağ tık ile Finder'da göster / çöpe taşı |
+| **Büyük Dosyalar** | Boyut, tür, son kullanım ve konuma göre sıralanabilen tablo; "6+ ay kullanılmayan" filtresi; harici diske doğrulamalı arşivleme |
+| **Menü çubuğu** | Üst barda boş alan; belirlenen eşiğin altına düşünce bildirim (Ayarlar › ⌘,) |
+| **Benzer Fotoğraflar** | Seri çekimleri ve yeniden kaydedilmiş kopyaları Apple Vision görüntü parmak iziyle (yerelde) gruplar |
+| **Uygulamalar** | Uygulamaları Library'deki kalıntılarıyla birlikte kaldırır; son açılma tarihine göre kullanılmayanları gösterir |
+| **Geliştirici** | Homebrew temizliği, kullanılmayan Xcode simülatörleri, Docker (`system prune`), dokunulmamış projelerin `node_modules` / `.venv` klasörleri |
+| **Otomatik Temizlik** | Zamanlanmış kurallar (ör. haftalık önbellek temizliği); varsayılan olarak önce önizleme ve bildirim, onayla uygulanır |
 | **Tekrarlanan Dosyalar** | Boyut → baş/son 64 KB özeti → tam SHA-256 ile birebir aynı dosyaları bulur. "Akıllı Seç" en eski kopyayı korur |
 | **Temizlik Geçmişi** | Kaldırılan her öğenin kaydı; Çöp Kutusu'nda duranlar tek tıkla eski yerine geri alınır |
 | **Hariç Tutulanlar** | Buraya eklenen klasör/dosyalar hiç önerilmez, listelerde gösterilmez ve asla silinmez (sağ tık › "Hariç Tut") |

@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
-    case assistant, overview, storage, growth, explorer, largeFiles, duplicates, junk, apps, developer, rules, history, exclusions
+    case assistant, overview, storage, growth, explorer, largeFiles, duplicates, photos, junk, apps, developer, rules, history, exclusions
 
     var id: String { rawValue }
 
@@ -15,6 +15,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .explorer: "Klasör Gezgini"
         case .largeFiles: "Büyük Dosyalar"
         case .duplicates: "Tekrarlanan Dosyalar"
+        case .photos: "Benzer Fotoğraflar"
         case .junk: "Gereksiz Dosyalar"
         case .apps: "Uygulamalar"
         case .developer: "Geliştirici"
@@ -33,6 +34,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .explorer: "folder"
         case .largeFiles: "doc.badge.arrow.up"
         case .duplicates: "doc.on.doc"
+        case .photos: "photo.stack"
         case .junk: "trash"
         case .apps: "square.grid.3x3"
         case .developer: "hammer"
@@ -86,6 +88,13 @@ final class AppState: ObservableObject {
     @Published private(set) var duplicatesReady = false
     @Published var duplicateMinSize: Int64 = 1_000_000
     private var duplicateTask: Task<[DuplicateGroup], Never>?
+
+    // Benzer fotoğraflar
+    @Published private(set) var similarPhotoGroups: [[FileEntry]] = []
+    @Published private(set) var isFindingSimilar = false
+    @Published private(set) var similarProgress: Double = 0
+    @Published private(set) var similarPhotosReady = false
+    private var similarTask: Task<[[FileEntry]], Never>?
 
     // Gereksiz dosyalar
     @Published private(set) var junkCategories: [JunkCategory] = []
@@ -221,6 +230,7 @@ final class AppState: ObservableObject {
         scanTask?.cancel()
         duplicateTask?.cancel()
         junkTask?.cancel()
+        similarTask?.cancel()
     }
 
     /// Tarama tamamlanırsa true, durdurulursa false döner.
@@ -260,6 +270,8 @@ final class AppState: ObservableObject {
         devArtifacts = result.devArtifacts.sorted { $0.size > $1.size }
         duplicateGroups = []
         duplicatesReady = false
+        similarPhotoGroups = []
+        similarPhotosReady = false
         lastScan = ScanSummary(root: root, totalFiles: result.totalFiles, unreadable: result.unreadable,
                                duration: result.duration, date: Date())
         let snapshot = ScanSnapshot(tree: result.root, files: result.files)
@@ -290,6 +302,24 @@ final class AppState: ObservableObject {
         guard !task.isCancelled else { return }
         duplicateGroups = groups
         duplicatesReady = true
+    }
+
+    func findSimilarPhotos() async {
+        guard !isFindingSimilar else { return }
+        if rootNode == nil { guard await scan() else { return } }
+        isFindingSimilar = true
+        similarProgress = 0
+        let entries = files
+        let task = Task.detached(priority: .userInitiated) { [weak self] () -> [[FileEntry]] in
+            SimilarPhotos.findGroups(in: entries) { p in Task { @MainActor in self?.similarProgress = p } }
+        }
+        similarTask = task
+        let groups = await task.value
+        similarTask = nil
+        isFindingSimilar = false
+        guard !task.isCancelled else { return }
+        similarPhotoGroups = groups
+        similarPhotosReady = true
     }
 
     func scanJunk() async {
@@ -679,6 +709,10 @@ final class AppState: ObservableObject {
 
         files.removeAll { isRemoved($0.id) }
         devArtifacts.removeAll { isRemoved($0.url.path) }
+        similarPhotoGroups = similarPhotoGroups.compactMap { g in
+            let rest = g.filter { !isRemoved($0.id) }
+            return rest.count > 1 ? rest : nil
+        }
         duplicateGroups = duplicateGroups.compactMap { g in
             var g = g
             g.files.removeAll { isRemoved($0.id) }
