@@ -6,6 +6,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [1.0.1] - 2026-11-09
 
+### Added
+
+- `CleanMac.dmg` installer (drag to Applications) attached to every release, with a "Download for macOS" link in the README that always points to the latest version.
+
 ### Fixed
 
 - Build failure with Swift 6.0/6.1 (Xcode 16), which broke the 1.0.0 CI and release builds.

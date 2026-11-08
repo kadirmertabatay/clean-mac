@@ -2,6 +2,10 @@
 
 ## Installing and launching
 
+### Where do I download it?
+
+**[CleanMac.dmg](https://github.com/kadirmertabatay/clean-mac/releases/latest/download/CleanMac.dmg)** is always the latest version. Open it and drag CleanMac onto the Applications folder.
+
 ### "CleanMac can't be opened because the developer cannot be verified"
 
 Releases are ad-hoc signed; they are not signed with an Apple Developer ID and not notarized. To open the app:
