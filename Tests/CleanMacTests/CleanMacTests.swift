@@ -383,3 +383,37 @@ final class TreemapTests: XCTestCase {
         XCTAssertEqual(Treemap.layout([0, 0], in: CGRect(x: 0, y: 0, width: 10, height: 10)), [.zero, .zero])
     }
 }
+
+final class ArchiveTests: XCTestCase {
+    func testArchiveCopiesVerifiesAndLogs() throws {
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent("CleanMacArchive-\(UUID().uuidString)")
+        let src = base.appendingPathComponent("src"), dst = base.appendingPathComponent("dst")
+        try FileManager.default.createDirectory(at: src, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: dst, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: base) }
+        let file = src.appendingPathComponent("video.mov")
+        try Data((0..<300_000).map { UInt8(truncatingIfNeeded: $0) }).write(to: file)
+        let entry = FileEntry(url: file, size: 300_000, modified: nil, accessed: nil, isProtected: false)
+
+        let r = try ArchiveEngine.archive([entry], to: dst, requireDifferentVolume: false) { _, _ in }
+        XCTAssertEqual(r.verified.count, 1)
+        XCTAssertTrue(r.failed.isEmpty)
+        let copy = r.verified[0].destination
+        XCTAssertEqual(DuplicateFinder.fullHash(copy), DuplicateFinder.fullHash(file))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: file.path), "Orijinali motor silmez")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: dst.appendingPathComponent("CleanMac Arşivi/arşiv-kaydı.tsv").path))
+
+        // Aynı adla ikinci arşiv üzerine yazmamalı.
+        let r2 = try ArchiveEngine.archive([entry], to: dst, requireDifferentVolume: false) { _, _ in }
+        XCTAssertNotEqual(r2.verified[0].destination, copy)
+    }
+
+    func testRejectsSameVolume() throws {
+        let tmp = FileManager.default.temporaryDirectory
+        let file = tmp.appendingPathComponent("CleanMacSameVol-\(UUID().uuidString)")
+        try Data("x".utf8).write(to: file)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let entry = FileEntry(url: file, size: 1, modified: nil, accessed: nil, isProtected: false)
+        XCTAssertThrowsError(try ArchiveEngine.archive([entry], to: tmp) { _, _ in })
+    }
+}

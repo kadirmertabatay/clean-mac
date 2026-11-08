@@ -87,6 +87,10 @@ struct LargeFilesView: View {
                         }
                         Button("Finder'da Göster") { Finder.reveal(urls) }
                         Button("Yolu Kopyala") { Finder.copyPaths(urls) }
+                        Button("Harici Diske Arşivle…") {
+                            let entries = items.filter { ids.contains($0.id) }
+                            if let dest = state.chooseArchiveDestination() { Task { await state.archive(entries, to: dest) } }
+                        }
                         Divider()
                         Button("Hariç Tut (önerme, silme)") { urls.forEach(state.addExclusion) }
                         if urls.count == 1, let u = urls.first {
@@ -113,9 +117,20 @@ struct LargeFilesView: View {
                     Text("\(items.count.formatted()) dosya · \(items.reduce(Int64(0)) { $0 + $1.size }.formattedBytes)")
                         .foregroundStyle(.secondary)
                     Spacer()
-                    if !selected.isEmpty {
+                    if let p = state.archiveProgress {
+                        ProgressView(value: Double(p.done), total: Double(max(p.total, 1))).frame(width: 120)
+                        Text("Arşivleniyor: \(p.current)").font(.caption).lineLimit(1).truncationMode(.middle).frame(maxWidth: 200)
+                    } else if !selected.isEmpty {
                         Text("Seçili: \(selected.count) · \(selectedSize.formattedBytes)").bold()
                         Button("Finder'da Göster") { Finder.reveal(selected.map(\.url)) }
+                        Button("Harici Diske Arşivle…") {
+                            if let dest = state.chooseArchiveDestination() {
+                                let entries = selected
+                                selection = []
+                                Task { await state.archive(entries, to: dest) }
+                            }
+                        }
+                        .help("Kopyalar, SHA-256 ile doğrular, sonra orijinali Çöp Kutusu'na taşır.")
                     }
                     Button("Çöp Kutusu'na Taşı", role: .destructive) { confirm = true }
                         .buttonStyle(.borderedProminent)

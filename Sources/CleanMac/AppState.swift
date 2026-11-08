@@ -98,6 +98,8 @@ final class AppState: ObservableObject {
     @Published private(set) var lastAnalysis: Date?
     @Published var largeFilesStaleOnly = false
     @Published private(set) var isRemoving = false
+    /// Arşivleme sürüyorsa (tamamlanan, toplam, şu anki dosya).
+    @Published private(set) var archiveProgress: (done: Int, total: Int, current: String)?
     private var junkTask: Task<[JunkCategory], Never>?
     private var analysisCancelled = false
 
@@ -401,6 +403,41 @@ final class AppState: ObservableObject {
         refreshDisk()
         if junkReady { await refreshJunkCategory("trash") }
         return result
+    }
+
+    func chooseArchiveDestination() -> URL? {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+        panel.directoryURL = URL(fileURLWithPath: "/Volumes")
+        panel.prompt = "Buraya Arşivle"
+        panel.message = "Dosyaların kopyalanacağı harici diski ya da klasörü seç"
+        return panel.runModal() == .OK ? panel.url : nil
+    }
+
+    /// Dosyaları hedefe kopyalar, doğrular; yalnızca doğrulananların orijinallerini Çöp Kutusu'na taşır.
+    func archive(_ entries: [FileEntry], to destination: URL) async {
+        guard archiveProgress == nil, !entries.isEmpty else { return }
+        archiveProgress = (0, entries.count, "")
+        let outcome = await Task.detached(priority: .userInitiated) { [weak self] () -> Swift.Result<ArchiveEngine.Result, Error> in
+            Swift.Result {
+                try ArchiveEngine.archive(entries, to: destination) { done, name in
+                    Task { @MainActor in self?.archiveProgress = (done, entries.count, name) }
+                }
+            }
+        }.value
+        archiveProgress = nil
+        switch outcome {
+        case .failure(let error):
+            showToast(error.localizedDescription, isError: true)
+        case .success(let r):
+            let targets = r.verified.map { RemovalTarget(url: $0.source.url, size: $0.source.size, expectedModified: $0.source.modified) }
+            if !targets.isEmpty { await remove(targets, permanently: false) }
+            var message = "\(r.verified.count) dosya \(destination.lastPathComponent) konumuna arşivlendi ve doğrulandı; orijinaller Çöp Kutusu'nda."
+            if !r.failed.isEmpty { message += " \(r.failed.count) dosya atlandı (\(r.failed[0].reason))." }
+            showToast(message, isError: r.verified.isEmpty)
+        }
     }
 
     func cleanJunkCategory(_ id: String) async {
