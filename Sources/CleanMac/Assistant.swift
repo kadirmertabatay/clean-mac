@@ -34,7 +34,7 @@ struct Recommendation: Identifiable {
     var actionTitle: String?
 }
 
-/// Kural tabanlı, tamamen yerel çalışan öneri motoru.
+/// Rule-based recommendation engine that runs entirely locally.
 extension AppState {
     static let staleDays = 180
 
@@ -71,25 +71,25 @@ extension AppState {
             let pct = d.freeFraction.formatted(.percent.precision(.fractionLength(0)))
             if d.freeFraction < 0.10 {
                 recs.append(.init(id: "disk", level: .critical, icon: "exclamationmark.octagon.fill",
-                                  title: "Disk neredeyse dolu",
-                                  detail: "Yalnızca \(d.available.formattedBytes) (\(pct)) boş alan kaldı. macOS'un rahat çalışması için en az %15 boş alan önerilir. Aşağıdaki önerilerle başla.",
-                                  action: .storageSettings, actionTitle: "Depolama Ayarları"))
+                                  title: L("Disk almost full"),
+                                  detail: L("Only \(d.available.formattedBytes) (\(pct)) of free space left. At least 15% free space is recommended for macOS to run smoothly. Start with the suggestions below."),
+                                  action: .storageSettings, actionTitle: L("Storage Settings")))
             } else if d.freeFraction < 0.20 {
                 recs.append(.init(id: "disk", level: .warning, icon: "exclamationmark.triangle.fill",
-                                  title: "Boş alan azalıyor",
-                                  detail: "\(d.available.formattedBytes) (\(pct)) boş alan var. Biraz temizlik iyi olur."))
+                                  title: L("Free space is running low"),
+                                  detail: L("\(d.available.formattedBytes) (\(pct)) free. A little cleanup would help.")))
             } else {
                 recs.append(.init(id: "disk", level: .good, icon: "checkmark.seal.fill",
-                                  title: "Disk durumu iyi",
-                                  detail: "\(d.total.formattedBytes) diskin \(d.available.formattedBytes) (\(pct)) kısmı boş."))
+                                  title: L("Disk is in good shape"),
+                                  detail: L("\(d.available.formattedBytes) (\(pct)) of your \(d.total.formattedBytes) disk is free.")))
             }
         }
 
         if !hasFullDiskAccess {
             recs.append(.init(id: "fda", level: .info, icon: "lock.shield",
-                              title: "Tam Disk Erişimi verilmemiş",
-                              detail: "Çöp Kutusu, Mail ve cihaz yedekleri gibi bazı klasörler okunamıyor. Daha doğru sonuç için CleanMac'e Tam Disk Erişimi verebilirsin (isteğe bağlı).",
-                              action: .fullDiskAccess, actionTitle: "Ayarları Aç"))
+                              title: L("Full Disk Access not granted"),
+                              detail: L("Some folders like the Trash, Mail and device backups can’t be read. For more accurate results you can give CleanMac Full Disk Access (optional)."),
+                              action: .fullDiskAccess, actionTitle: L("Open Settings")))
         }
 
         if junkReady {
@@ -98,51 +98,51 @@ extension AppState {
                 recs.append(.init(
                     id: "junk-\(c.id)", level: safe ? .suggestion : .info, icon: c.icon,
                     title: "\(c.title): \(c.size.formattedBytes)",
-                    detail: safe ? c.detail : c.detail + " Öğeleri tek tek gözden geçirmeni öneririm.",
+                    detail: safe ? c.detail : c.detail + L(" I recommend reviewing the items one by one."),
                     size: c.size,
                     action: safe ? .cleanJunk(c.id) : .open(.junk),
-                    actionTitle: safe ? (c.permanentOnly ? "Boşalt" : "Temizle") : "İncele"))
+                    actionTitle: safe ? (c.permanentOnly ? L("Empty") : L("Clean")) : L("Review")))
             }
         }
 
         if rootNode != nil {
             if devArtifactTotal >= 200_000_000 {
                 recs.append(.init(id: "dev", level: .suggestion, icon: "shippingbox.fill",
-                                  title: "\(visibleDevArtifacts.count) proje bağımlılık klasörü: \(devArtifactTotal.formattedBytes)",
-                                  detail: "node_modules, .venv, Pods gibi klasörler. Üzerinde çalışmadığın projelerinkini silebilirsin; gerektiğinde npm install / pip install ile geri gelir.",
-                                  size: devArtifactTotal, action: .open(.developer), actionTitle: "İncele"))
+                                  title: L("\(visibleDevArtifacts.count) project dependency folders: \(devArtifactTotal.formattedBytes)"),
+                                  detail: L("Folders like node_modules, .venv and Pods. You can delete the ones from projects you’re not working on; they come back with npm install / pip install when needed."),
+                                  size: devArtifactTotal, action: .open(.developer), actionTitle: L("Review")))
             }
             let stale = staleLargeFiles
             if !stale.isEmpty {
                 let total = stale.reduce(Int64(0)) { $0 + $1.size }
                 recs.append(.init(id: "stale", level: .suggestion, icon: "clock.badge.questionmark",
-                                  title: "\(Self.staleDays / 30)+ aydır kullanılmayan \(stale.count) büyük dosya: \(total.formattedBytes)",
-                                  detail: "Uzun süredir açılmayan 100 MB üzeri dosyalar. Harici diske ya da buluta taşımayı düşünebilirsin.",
-                                  size: total, action: .openStaleLargeFiles, actionTitle: "Göster"))
+                                  title: L("\(stale.count) large files unused for \(Self.staleDays / 30)+ months: \(total.formattedBytes)"),
+                                  detail: L("Files over 100 MB that haven’t been opened in a long time. Consider moving them to an external disk or the cloud."),
+                                  size: total, action: .openStaleLargeFiles, actionTitle: L("Show")))
             }
             let huge = files.filter { !$0.isProtected && !isExcluded($0.id) && $0.size >= 1_000_000_000 }.sorted { $0.size > $1.size }
             if !huge.isEmpty {
                 let names = huge.prefix(3).map { "\($0.name) (\($0.size.formattedBytes))" }.joined(separator: ", ")
                 recs.append(.init(id: "huge", level: .info, icon: "doc.badge.arrow.up",
-                                  title: "1 GB üzeri \(huge.count) dosya var",
-                                  detail: "En büyükleri: \(names).",
-                                  size: huge.reduce(0) { $0 + $1.size }, action: .open(.largeFiles), actionTitle: "Listele"))
+                                  title: L("\(huge.count) files over 1 GB"),
+                                  detail: L("Largest: \(names)."),
+                                  size: huge.reduce(0) { $0 + $1.size }, action: .open(.largeFiles), actionTitle: L("Show List")))
             }
             if let root = rootNode, let top = root.children.first(where: { !$0.isAggregate && $0.isDirectory }) {
                 recs.append(.init(id: "top", level: .info, icon: "folder.fill",
-                                  title: "En çok yer kaplayan klasör: \(top.url.abbreviatedPath)",
-                                  detail: "\(top.size.formattedBytes) · \(top.fileCount.formatted()) dosya. İçine bakıp neyin büyüdüğünü görebilirsin.",
-                                  size: top.size, action: .openFolder(top), actionTitle: "Aç"))
+                                  title: L("Largest folder: \(top.url.abbreviatedPath)"),
+                                  detail: L("\(top.size.formattedBytes) · \(top.fileCount.formatted()) files. Look inside to see what grew."),
+                                  size: top.size, action: .openFolder(top), actionTitle: L("Open")))
             }
         }
 
-        // Tüm Mac tarandığında, taramanın göremediği alanı açıkla.
+        // When the entire Mac was scanned, explain the space the scan couldn't see.
         if let root = rootNode, root.url.path == "/", let d = disk, d.used - root.size > 5_000_000_000 {
             let hidden = d.used - root.size
             recs.append(.init(id: "hidden", level: .info, icon: "eye.slash",
-                              title: "\(hidden.formattedBytes) taramada görünmüyor",
-                              detail: "Bu alan genellikle Time Machine yerel anlık görüntüleri, macOS'un temizlenebilir (purgeable) verileri, sistem birimleri ya da izin olmadığı için okunamayan klasörlerdir (\(lastScan?.unreadable ?? 0) klasör okunamadı). Tam Disk Erişimi vermek ve `tmutil listlocalsnapshots /` komutuna bakmak yardımcı olur.",
-                              size: hidden, action: .open(.storage), actionTitle: "Dökümü Gör"))
+                              title: L("\(hidden.formattedBytes) not visible to the scan"),
+                              detail: L("This space is usually local Time Machine snapshots, purgeable data managed by macOS, system volumes, or folders that couldn’t be read due to missing permissions (\(lastScan?.unreadable ?? 0) folders couldn’t be read). Granting Full Disk Access and checking `tmutil listlocalsnapshots /` helps."),
+                              size: hidden, action: .open(.storage), actionTitle: L("See Breakdown")))
         }
 
         let appCutoff = Date().addingTimeInterval(-Double(Self.staleDays) * 86_400)
@@ -151,18 +151,18 @@ extension AppState {
             let total = unusedApps.reduce(Int64(0)) { $0 + $1.size }
             let names = unusedApps.sorted { $0.size > $1.size }.prefix(3).map(\.name).joined(separator: ", ")
             recs.append(.init(id: "apps", level: .suggestion, icon: "square.grid.3x3",
-                              title: "6+ aydır açılmayan \(unusedApps.count) uygulama: \(total.formattedBytes)",
-                              detail: "En büyükleri: \(names). Kalıntı dosyalarıyla birlikte kaldırabilirsin.",
-                              size: total, action: .open(.apps), actionTitle: "İncele"))
+                              title: L("\(unusedApps.count) apps not opened in 6+ months: \(total.formattedBytes)"),
+                              detail: L("Largest: \(names). You can remove them together with their leftover files."),
+                              size: total, action: .open(.apps), actionTitle: L("Review")))
         }
 
         if let docker = apps.first(where: { $0.bundleID == "com.docker.docker" }) {
             let data = dockerDataSize
             if data > 5_000_000_000 {
                 recs.append(.init(id: "docker", level: .suggestion, icon: "cube.box",
-                                  title: "Docker verisi \(data.formattedBytes) yer kaplıyor",
-                                  detail: "\(docker.name) imajları, konteynerleri ve derleme önbelleği tek bir sanal diskte tutulur. Kullanılmayanları temizleyebilir ya da Docker'ı hiç kullanmıyorsan kaldırabilirsin.",
-                                  size: data, action: .open(.docker), actionTitle: "İncele"))
+                                  title: L("Docker data takes up \(data.formattedBytes)"),
+                                  detail: L("\(docker.name) keeps images, containers and the build cache in a single virtual disk. You can clean up unused items, or remove Docker entirely if you don’t use it."),
+                                  size: data, action: .open(.docker), actionTitle: L("Review")))
             }
         }
 
@@ -170,24 +170,24 @@ extension AppState {
             let diff = GrowthDiff.compute(old: scanSnapshots[1], new: scanSnapshots[0])
             if diff.totalDelta >= 1_000_000_000, let top = diff.grown.first {
                 recs.append(.init(id: "growth", level: .info, icon: "chart.line.uptrend.xyaxis",
-                                  title: "Önceki taramadan beri \(diff.totalDelta.formattedBytes) büyüdü",
-                                  detail: "En çok büyüyen: \(top.url.abbreviatedPath) (+\(top.delta.formattedBytes)), \(diff.from.formatted(.relative(presentation: .named))) yapılan taramaya göre.",
-                                  size: diff.totalDelta, action: .open(.growth), actionTitle: "Karşılaştır"))
+                                  title: L("Grew by \(diff.totalDelta.formattedBytes) since the previous scan"),
+                                  detail: L("Grew the most: \(top.url.abbreviatedPath) (+\(top.delta.formattedBytes)), compared with the scan from \(diff.from.formatted(.relative(presentation: .named)))."),
+                                  size: diff.totalDelta, action: .open(.growth), actionTitle: L("Compare")))
             }
         }
 
         if let s = storage, !s.snapshots.isEmpty {
             recs.append(.init(id: "snapshots", level: .suggestion, icon: "clock.arrow.circlepath",
-                              title: "\(s.snapshots.count) yerel Time Machine anlık görüntüsü var",
-                              detail: "Bu anlık görüntüler taramada görünmeyen alan kaplar. Harici yedeklerin varsa güvenle silinebilirler.",
-                              action: .open(.storage), actionTitle: "İncele"))
+                              title: L("\(s.snapshots.count) local Time Machine snapshots"),
+                              detail: L("These snapshots use space the scan can’t see. If you have external backups, they can be deleted safely."),
+                              action: .open(.storage), actionTitle: L("Review")))
         }
 
         if duplicatesReady, visibleDuplicateWaste >= 50_000_000 {
             recs.append(.init(id: "dups", level: .suggestion, icon: "doc.on.doc.fill",
-                              title: "Tekrarlanan dosyalar \(visibleDuplicateWaste.formattedBytes) boşa yer kaplıyor",
-                              detail: "Aynı içeriğe sahip birden fazla kopya bulundu. Her gruptan birini saklayıp diğerlerini kaldırabilirsin.",
-                              size: visibleDuplicateWaste, action: .open(.duplicates), actionTitle: "İncele"))
+                              title: L("Duplicate files waste \(visibleDuplicateWaste.formattedBytes)"),
+                              detail: L("Multiple copies with the same content were found. You can keep one from each group and remove the others."),
+                              size: visibleDuplicateWaste, action: .open(.duplicates), actionTitle: L("Review")))
         }
 
         return recs.sorted {
@@ -209,12 +209,12 @@ struct AssistantView: View {
                 if state.isAnalyzing { progressCard }
                 if state.hasAnalysisData { summary }
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Öneriler").font(.title2.bold())
+                    Text(L("Suggestions")).font(.title2.bold())
                     ForEach(state.recommendations) { rec in
                         RecommendationRow(rec: rec) { handle($0) }
                     }
                     if !state.hasAnalysisData && !state.isAnalyzing {
-                        Text("Analizi başlattığında Mac'ine özel öneriler burada görünecek.")
+                        Text(L("Suggestions tailored to your Mac will appear here once you start the analysis."))
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -224,18 +224,18 @@ struct AssistantView: View {
             .frame(maxWidth: 920)
             .frame(maxWidth: .infinity)
         }
-        .confirmationDialog(pendingClean.map { "\($0.title) temizlensin mi?" } ?? "",
+        .confirmationDialog(pendingClean.map { L("Clean \($0.title)?") } ?? "",
                             isPresented: Binding(get: { pendingClean != nil }, set: { if !$0 { pendingClean = nil } }),
                             presenting: pendingClean) { category in
-            Button(category.permanentOnly ? "Çöpü Boşalt" : "Temizle (\(category.size.formattedBytes))", role: .destructive) {
+            Button(category.permanentOnly ? L("Empty Trash") : L("Clean (\(category.size.formattedBytes))"), role: .destructive) {
                 Task { await state.cleanJunkCategory(category.id) }
             }
-            Button("Vazgeç", role: .cancel) {}
+            Button(L("Cancel"), role: .cancel) {}
         } message: { category in
             let protectedCount = category.items.filter { state.isSmartProtected($0.id) }.count
-            Text((protectedCount > 0 ? "Akıllı Silme korumaları nedeniyle \(protectedCount) öğe atlanacak. " : "") + (category.permanentOnly || permanentDelete
-                 ? "\(category.items.count) öğe kalıcı olarak silinecek. Bu işlem geri alınamaz."
-                 : "\(category.items.count) öğe Çöp Kutusu'na taşınacak. Yer açmak için daha sonra çöpü boşaltman gerekir."))
+            Text((protectedCount > 0 ? L("\(protectedCount) items will be skipped because of Smart Cleanup protections. ") : "") + (category.permanentOnly || permanentDelete
+                 ? L("\(category.items.count) items will be deleted permanently. This can’t be undone.")
+                 : L("\(category.items.count) items will be moved to the Trash. Empty the Trash later to free the space.")))
         }
     }
 
@@ -245,21 +245,21 @@ struct AssistantView: View {
                 .resizable()
                 .frame(width: 76, height: 76)
             VStack(alignment: .leading, spacing: 8) {
-                Text("Merhaba! Ben depolama asistanın.").font(.title.bold())
-                Text("Mac'ini tarayıp neyin yer kapladığını bulurum, güvenle silinebilecekleri önerir ve tekrar eden dosyaları gösteririm. Her şey bu bilgisayarda çalışır; sen onaylamadan hiçbir dosya silinmez ve varsayılan olarak her şey Çöp Kutusu'na taşınır.")
+                Text(L("Hi! I’m your storage assistant.")).font(.title.bold())
+                Text(L("I scan your Mac to find what’s taking up space, suggest what can be safely deleted and show duplicate files. Everything runs on this computer; nothing is deleted without your approval, and by default everything goes to the Trash."))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 HStack {
                     Button {
                         Task { await state.runFullAnalysis() }
                     } label: {
-                        Label(state.lastAnalysis == nil ? "Tam Analizi Başlat" : "Analizi Yenile", systemImage: "wand.and.stars")
+                        Label(state.lastAnalysis == nil ? L("Start Full Analysis") : L("Refresh Analysis"), systemImage: "wand.and.stars")
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
                     .disabled(state.isAnalyzing || state.isScanning)
 
-                    Text("Kapsam:").foregroundStyle(.secondary).padding(.leading, 6)
+                    Text(L("Scope:")).foregroundStyle(.secondary).padding(.leading, 6)
                     ScanScopeMenu()
                         .controlSize(.large)
                 }
@@ -275,10 +275,10 @@ struct AssistantView: View {
                     ProgressView().controlSize(.small)
                     Text(state.analysisStep).font(.headline)
                     Spacer()
-                    Button("Durdur") { state.cancelScan() }
+                    Button(L("Stop")) { state.cancelScan() }
                 }
                 if let p = state.scanProgress {
-                    Text("\(p.files.formatted()) dosya · \(p.bytes.formattedBytes) — \(URL(fileURLWithPath: p.currentPath).abbreviatedPath)")
+                    Text(L("\(p.files.formatted()) files · \(p.bytes.formattedBytes) — \(URL(fileURLWithPath: p.currentPath).abbreviatedPath)"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -293,27 +293,27 @@ struct AssistantView: View {
 
     private var summary: some View {
         HStack(spacing: 14) {
-            SummaryTile(title: "Güvenle temizlenebilir", value: state.safeJunkTotal, color: .green,
-                        note: "Önbellek, günlük, geliştirici artıkları")
-            SummaryTile(title: "Gözden geçirilebilir", value: state.reviewJunkTotal + state.devArtifactTotal + state.visibleDuplicateWaste,
-                        color: .orange, note: "İndirmeler, bağımlılıklar, tekrarlar")
+            SummaryTile(title: L("Safe to clean"), value: state.safeJunkTotal, color: .green,
+                        note: L("Caches, logs, developer leftovers"))
+            SummaryTile(title: L("Worth reviewing"), value: state.reviewJunkTotal + state.devArtifactTotal + state.visibleDuplicateWaste,
+                        color: .orange, note: L("Downloads, dependencies, duplicates"))
             if let d = state.disk {
-                SummaryTile(title: "Şu an boş alan", value: d.available, color: usageColor(d.usedFraction),
-                            note: "\(d.total.formattedBytes) diskin")
+                SummaryTile(title: L("Free space now"), value: d.available, color: usageColor(d.usedFraction),
+                            note: L("of your \(d.total.formattedBytes) disk"))
             }
         }
     }
 
     private var tips: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("İpuçları").font(.title2.bold())
+            Text(L("Tips")).font(.title2.bold())
             Card {
                 VStack(alignment: .leading, spacing: 10) {
-                    tip("internaldrive", "Sistem Ayarları › Genel › Depolama bölümündeki önerileri de kontrol et.")
-                    tip("icloud", "iCloud Drive'da \"Mac Depolamasını Optimize Et\" açıksa az kullanılan dosyalar yerelden kaldırılır.")
-                    tip("clock.arrow.circlepath", "Time Machine yerel anlık görüntüleri: Terminal'de `tmutil listlocalsnapshots /`")
-                    tip("shippingbox", "Docker kullanıyorsan `docker system prune -a` kullanılmayan imajları temizler.")
-                    tip("iphone", "Eski simülatörler için: `xcrun simctl delete unavailable`")
+                    tip("internaldrive", L("Also check the recommendations in System Settings › General › Storage."))
+                    tip("icloud", L("If “Optimize Mac Storage” is on in iCloud Drive, rarely used files are removed from the Mac."))
+                    tip("clock.arrow.circlepath", L("Local Time Machine snapshots: run `tmutil listlocalsnapshots /` in Terminal"))
+                    tip("shippingbox", L("If you use Docker, `docker system prune -a` removes unused images."))
+                    tip("iphone", L("For old simulators: `xcrun simctl delete unavailable`"))
                 }
             }
         }
@@ -369,7 +369,7 @@ private struct RecommendationRow: View {
                 .background(rec.level.color.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
             VStack(alignment: .leading, spacing: 4) {
                 Text(rec.title).font(.headline)
-                Text(rec.detail).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Text(.init(rec.detail)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 12)
             if let action = rec.action, let title = rec.actionTitle {

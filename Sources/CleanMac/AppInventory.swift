@@ -28,7 +28,7 @@ struct AppLeftover: Identifiable, Hashable {
     var id: String { url.path }
 }
 
-/// Yüklü uygulamaları ve Library'de bıraktıkları dosyaları bulur.
+/// Finds installed apps and the files they leave behind in Library.
 enum AppInventory {
     static let home = Paths.home
 
@@ -41,7 +41,7 @@ enum AppInventory {
                 if item.pathExtension == "app" {
                     urls.append(item)
                 } else if (try? item.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true {
-                    // "Utilities" gibi bir seviye alt klasörler.
+                    // One level of subfolders such as "Utilities".
                     let sub = (try? fm.contentsOfDirectory(at: item, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])) ?? []
                     urls += sub.filter { $0.pathExtension == "app" }
                 }
@@ -62,13 +62,13 @@ enum AppInventory {
         return apps.compactMap { $0 }.sorted { $0.size > $1.size }
     }
 
-    /// Spotlight'ın tuttuğu "son açılma" tarihi.
+    /// The "last opened" date tracked by Spotlight.
     static func lastUsedDate(_ url: URL) -> Date? {
         guard let item = MDItemCreateWithURL(nil, url as CFURL) else { return nil }
         return MDItemCopyAttribute(item, kMDItemLastUsedDate) as? Date
     }
 
-    /// Uygulamanın ~/Library içinde bıraktığı dosyalar. Eşleştirme paket kimliği (ve bazı klasörlerde tam uygulama adı) ile yapılır.
+    /// Files the app left in ~/Library. Matched by bundle identifier (and, for some folders, the exact app name).
     static func leftovers(for app: InstalledApp) -> [AppLeftover] {
         guard let id = app.bundleID, !id.isEmpty else { return [] }
         let lib = home.appendingPathComponent("Library")
@@ -80,29 +80,29 @@ enum AppInventory {
             let u = lib.appendingPathComponent(rel)
             if fm.fileExists(atPath: u.path) { candidates.append((u, kind)) }
         }
-        add("Application Support/\(id)", "Uygulama verisi")
-        add("Application Support/\(appName)", "Uygulama verisi")
-        add("Caches/\(id)", "Önbellek")
-        add("Caches/\(appName)", "Önbellek")
-        add("HTTPStorages/\(id)", "Önbellek")
-        add("HTTPStorages/\(id).binarycookies", "Çerezler")
-        add("WebKit/\(id)", "Web verisi")
-        add("Preferences/\(id).plist", "Ayarlar")
-        add("Saved Application State/\(id).savedState", "Pencere durumu")
-        add("Logs/\(appName)", "Günlükler")
-        add("Logs/\(id)", "Günlükler")
-        add("Cookies/\(id).binarycookies", "Çerezler")
-        add("Containers/\(id)", "Sanal alan (container)")
-        add("Application Scripts/\(id)", "Betikler")
+        add("Application Support/\(id)", L("App data"))
+        add("Application Support/\(appName)", L("App data"))
+        add("Caches/\(id)", L("Cache"))
+        add("Caches/\(appName)", L("Cache"))
+        add("HTTPStorages/\(id)", L("Cache"))
+        add("HTTPStorages/\(id).binarycookies", L("Cookies"))
+        add("WebKit/\(id)", L("Web data"))
+        add("Preferences/\(id).plist", L("Preferences"))
+        add("Saved Application State/\(id).savedState", L("Window state"))
+        add("Logs/\(appName)", L("Logs"))
+        add("Logs/\(id)", L("Logs"))
+        add("Cookies/\(id).binarycookies", L("Cookies"))
+        add("Containers/\(id)", L("Sandbox (container)"))
+        add("Application Scripts/\(id)", L("Scripts"))
 
-        // Grup kapsayıcıları "TAKIMKIMLIGI.paket.kimligi" biçimindedir; tam paket kimliğiyle bitenleri al.
+        // Group containers are named "TEAMID.bundle.identifier"; take the ones ending with the full bundle identifier.
         let groups = (try? fm.contentsOfDirectory(atPath: lib.appendingPathComponent("Group Containers").path)) ?? []
         for g in groups where g.hasSuffix(".\(id)") || g == id {
-            candidates.append((lib.appendingPathComponent("Group Containers/\(g)"), "Grup verisi"))
+            candidates.append((lib.appendingPathComponent("Group Containers/\(g)"), L("Group data")))
         }
         let agents = (try? fm.contentsOfDirectory(atPath: lib.appendingPathComponent("LaunchAgents").path)) ?? []
         for a in agents where a.hasPrefix(id) {
-            candidates.append((lib.appendingPathComponent("LaunchAgents/\(a)"), "Otomatik başlatma"))
+            candidates.append((lib.appendingPathComponent("LaunchAgents/\(a)"), L("Launch at login")))
         }
 
         var seen = Set<String>()

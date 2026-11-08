@@ -1,13 +1,13 @@
 #!/bin/bash
-# CleanMac.app paketini derler.
+# Builds the CleanMac.app bundle.
 #
-#   ./build-app.sh            build/CleanMac.app oluşturur
-#   ./build-app.sh --install  ayrıca /Applications içine kopyalar
-#   ./build-app.sh --zip      evrensel (arm64 + x86_64) derler ve GitHub Releases için build/CleanMac-<sürüm>.zip üretir
+#   ./build-app.sh            creates build/CleanMac.app
+#   ./build-app.sh --install  also copies it to /Applications
+#   ./build-app.sh --zip      builds a universal (arm64 + x86_64) app and build/CleanMac-<version>.zip for GitHub Releases
 set -euo pipefail
 cd "$(dirname "$0")"
 
-# Sürüm arşivi (--zip) hem Apple Silicon hem Intel için evrensel derlenir.
+# Release archives (--zip) are built as universal binaries for Apple silicon and Intel.
 BUILD_FLAGS=(-c release)
 [ "${1:-}" = "--zip" ] && BUILD_FLAGS+=(--arch arm64 --arch x86_64)
 
@@ -21,14 +21,22 @@ cp "$(swift build "${BUILD_FLAGS[@]}" --show-bin-path)/CleanMac" "$APP/Contents/
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 cp LICENSE "$APP/Contents/Resources/LICENSE"
+
+# Localizations: the string catalog becomes <lang>.lproj/Localizable.strings(dict); InfoPlist.strings are copied as is.
+xcrun xcstringstool compile Resources/Localizable.xcstrings --output-directory "$APP/Contents/Resources"
+for lproj in Resources/*.lproj; do
+    mkdir -p "$APP/Contents/Resources/$(basename "$lproj")"
+    cp "$lproj"/* "$APP/Contents/Resources/$(basename "$lproj")/"
+done
+
 codesign --force --sign - "$APP"
-echo "Hazır: $APP"
+echo "Ready: $APP"
 
 case "${1:-}" in
     --install)
         rm -rf /Applications/CleanMac.app
         cp -R "$APP" /Applications/
-        echo "Kuruldu: /Applications/CleanMac.app"
+        echo "Installed: /Applications/CleanMac.app"
         ;;
     --zip)
         VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Resources/Info.plist)
@@ -36,6 +44,6 @@ case "${1:-}" in
         rm -f "build/$ZIP"
         ditto -c -k --keepParent "$APP" "build/$ZIP"
         (cd build && shasum -a 256 "$ZIP" | tee "$ZIP.sha256")
-        echo "Arşiv: build/$ZIP"
+        echo "Archive: build/$ZIP"
         ;;
 esac

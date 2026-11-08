@@ -1,7 +1,7 @@
 import CryptoKit
 import Foundation
 
-/// Bir taramanın karşılaştırma için saklanan özeti (klasörler 3 seviyeye kadar, 100 MB üzeri dosyalar).
+/// Summary of a scan kept for comparison (folders up to 3 levels deep, files over 100 MB).
 struct ScanSnapshot: Codable {
     let root: String
     let date: Date
@@ -54,9 +54,9 @@ struct GrowthDiff {
     let newFiles: [GrowthItem]
     let goneFiles: [GrowthItem]
 
-    /// İki özet arasındaki farklar; `minDelta` altındaki değişimler gürültü sayılır.
+    /// Differences between two summaries; changes below `minDelta` are treated as noise.
     static func compute(old: ScanSnapshot, new: ScanSnapshot, minDelta: Int64 = 50_000_000) -> GrowthDiff {
-        // Bir tarafta olmayan klasör ya yeni/silinmiş ya da 10 MB eşiğinin altındadır; 0 saymanın hatası eşikten küçüktür.
+        // A folder missing on one side is either new/deleted or below the 10 MB threshold; counting it as 0 errs by less than the threshold.
         let changes = Set(old.dirs.keys).union(new.dirs.keys)
             .map { GrowthItem(path: $0, old: old.dirs[$0] ?? 0, new: new.dirs[$0] ?? 0) }
             .filter { abs($0.delta) >= minDelta }
@@ -72,7 +72,7 @@ struct GrowthDiff {
     }
 }
 
-/// Tarama özetlerini kök klasör başına diskte saklar (en fazla 12 tane).
+/// Stores scan summaries on disk per root folder (at most 12).
 struct SnapshotStore {
     let directory: URL
     static let keep = 12

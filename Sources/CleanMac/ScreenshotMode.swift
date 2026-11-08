@@ -1,17 +1,17 @@
 import AppKit
 import SwiftUI
 
-/// Belgelerdeki ekran görüntülerini üreten otomatik mod.
+/// Automated mode that produces the screenshots used in the documentation.
 ///
-/// Yalnızca `CLEANMAC_SCREENSHOTS=<klasör>` ortam değişkeniyle açılır; normal kullanımda hiçbir etkisi yoktur.
-/// Pencereyi sabit bir boyuta getirir, tam analizi çalıştırır, ekranları sırayla gezer ve her birinin
-/// görüntüsünü pencerenin kendi çiziminden alır (ekran kaydı izni gerekmez). Hiçbir şey silinmez.
-/// Değiştirdiği ayarları bitince eski haline döndürür. Kullanım için `scripts/screenshots.sh`'a bakın.
+/// Enabled only with the `CLEANMAC_SCREENSHOTS=<folder>` environment variable; has no effect in normal use.
+/// Resizes the window to a fixed size, runs the full analysis, visits each screen in turn and
+/// captures it from the window itself (no screen recording permission needed). Nothing is deleted.
+/// Restores the settings it changed when done. See `scripts/screenshots.sh` for usage.
 @MainActor
 enum ScreenshotMode {
     static let outputDirectory = ProcessInfo.processInfo.environment["CLEANMAC_SCREENSHOTS"].map { URL(fileURLWithPath: $0) }
     static var isActive: Bool { outputDirectory != nil }
-    /// Yalnızca bir tarama yapıp çıkar ("Ne Büyüdü?" ekranı için önceki bir tarama oluşturur).
+    /// Performs a single scan and quits (creates a previous scan for the "What Grew?" screen).
     static let warmupOnly = ProcessInfo.processInfo.environment["CLEANMAC_SCREENSHOTS_WARMUP"] != nil
 
     static let windowSize = CGSize(width: 1280, height: 820)
@@ -32,9 +32,9 @@ enum ScreenshotMode {
             NSApp.appearance = NSAppearance(named: .aqua)
         }
         await sleep(0.4)
-        guard let window = mainWindow() else { print("screenshots: pencere bulunamadı"); return }
+        guard let window = mainWindow() else { print("screenshots: window not found"); return }
         window.setContentSize(windowSize)
-        // Görüntüler 2x olsun diye pencereyi en yüksek çözünürlüklü ekranın ortasına taşır.
+        // Move the window to the center of the highest-resolution screen so the images are 2x.
         if let screen = NSScreen.screens.max(by: { $0.backingScaleFactor < $1.backingScaleFactor }) {
             let area = screen.visibleFrame, frame = window.frame
             window.setFrameOrigin(NSPoint(x: area.midX - frame.width / 2, y: max(area.minY, area.midY - frame.height / 2)))
@@ -90,8 +90,8 @@ enum ScreenshotMode {
         print("screenshots: \(dir.path)")
     }
 
-    /// Otomatik Temizlik ekranı için önerilen kuralları (yalnızca önizlemeli, otomatik uygulamasız) ekler ve
-    /// demo klasöründe bekleyen boyutlarını hesaplar. Hiçbir kural çalıştırılmaz; kurallar bitince geri yüklenir.
+    /// Adds the suggested rules (preview only, never auto-applied) for the Auto Cleanup screen and
+    /// computes their pending sizes in the demo folder. No rule is run; the rules are restored afterwards.
     private static func prepareRules(_ state: AppState) async {
         for rule in state.rules { state.deleteRule(rule.id) }
         CleanupRule.presets.prefix(3).filter { !$0.autoApply }.forEach(state.addRule)
@@ -104,12 +104,13 @@ enum ScreenshotMode {
         }
     }
 
-    /// Başka bir uygulama öne geçtiyse pencereyi yeniden etkin yapar (etkin olmayan pencere soluk görünür).
+    /// Re-activates the window if another app came to the front (an inactive window looks dimmed).
     private static func focus(_ window: NSWindow) {
-        guard !window.isKeyWindow else { return }
-        NSApp.activate(ignoringOtherApps: true)
-        window.makeKeyAndOrderFront(nil)
-        RunLoop.main.run(until: Date().addingTimeInterval(0.4))
+        for _ in 0..<10 where !(NSApp.isActive && window.isKeyWindow) {
+            NSApp.activate(ignoringOtherApps: true)
+            window.makeKeyAndOrderFront(nil)
+            RunLoop.main.run(until: Date().addingTimeInterval(0.3))
+        }
     }
 
     private static func mainWindow() -> NSWindow? {
@@ -119,12 +120,12 @@ enum ScreenshotMode {
             ?? NSApp.windows.filter(\.isVisible).max { $0.frame.width < $1.frame.width }
     }
 
-    /// Pencereyi başlık çubuğu dahil, gerçek görünümüyle (saydam kenar çubuğu, yuvarlak köşeler) PNG olarak kaydeder.
-    /// Bir uygulama kendi penceresini ekran kaydı izni olmadan yakalayabilir. API yeni SDK'larda gizlendiği için
-    /// çalışma anında bulunur; bulunamazsa pencerenin kendi çizimine geri dönülür.
+    /// Saves the window, including the title bar, as a PNG with its real appearance (translucent sidebar, rounded corners).
+    /// An app can capture its own window without screen recording permission. The API is hidden in newer SDKs, so
+    /// it's looked up at runtime; if unavailable, it falls back to the window's own drawing.
     private static func capture(_ window: NSWindow, _ name: String, in dir: URL) {
         guard let image = windowServerImage(window) ?? viewImage(window) else {
-            print("screenshots: \(name) yakalanamadı")
+            print("screenshots: couldn’t capture \(name)")
             return
         }
         let url = dir.appendingPathComponent("\(name).png")
@@ -132,7 +133,7 @@ enum ScreenshotMode {
             try NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:])?.write(to: url)
             print("screenshots: \(name).png")
         } catch {
-            print("screenshots: \(name) yazılamadı: \(error)")
+            print("screenshots: couldn’t write \(name): \(error)")
         }
     }
 

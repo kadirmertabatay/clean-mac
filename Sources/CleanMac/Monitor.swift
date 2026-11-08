@@ -1,11 +1,11 @@
 import SwiftUI
 import UserNotifications
 
-/// Ayar anahtarları ve varsayılanları.
+/// Preference keys and defaults.
 enum Prefs {
     static let menuBarEnabled = "menuBarEnabled"
     static let lowSpaceAlerts = "lowSpaceAlerts"
-    static let lowSpaceThreshold = "lowSpaceThreshold"   // yüzde
+    static let lowSpaceThreshold = "lowSpaceThreshold"   // percent
     static let lastLowSpaceAlert = "lastLowSpaceAlert"
     static let showSplash = "showSplash"
 
@@ -14,7 +14,7 @@ enum Prefs {
     }
 }
 
-/// Boş alanı periyodik olarak izler; eşiğin altına düşünce günde en fazla bir kez bildirim gönderir.
+/// Monitors free space periodically; sends at most one notification a day when it drops below the threshold.
 @MainActor
 final class SpaceMonitor {
     static let shared = SpaceMonitor()
@@ -41,8 +41,8 @@ final class SpaceMonitor {
                                lastAlert: d.object(forKey: Prefs.lastLowSpaceAlert) as? Date) else { return }
         d.set(Date(), forKey: Prefs.lastLowSpaceAlert)
         let content = UNMutableNotificationContent()
-        content.title = "Disk alanı azaldı"
-        content.body = "Yalnızca \(disk.available.formattedBytes) (\(disk.freeFraction.formatted(.percent.precision(.fractionLength(0))))) boş alan kaldı. Temizlik önerileri için CleanMac'i aç."
+        content.title = L("Disk space is low")
+        content.body = L("Only \(disk.available.formattedBytes) (\(disk.freeFraction.formatted(.percent.precision(.fractionLength(0))))) of free space left. Open CleanMac for cleanup suggestions.")
         content.sound = .default
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "lowSpace", content: content, trigger: nil))
     }
@@ -87,10 +87,10 @@ struct MenuBarContent: View {
                 HStack {
                     Text(d.name).font(.headline)
                     Spacer()
-                    Text(d.freeFraction.formatted(.percent.precision(.fractionLength(0))) + " boş").foregroundStyle(.secondary)
+                    Text(d.freeFraction.formatted(.percent.precision(.fractionLength(0))) + L(" free")).foregroundStyle(.secondary)
                 }
                 UsageBar(fraction: d.usedFraction, color: usageColor(d.usedFraction), height: 8)
-                Text("\(d.available.formattedBytes) boş · \(d.total.formattedBytes)").font(.caption).foregroundStyle(.secondary)
+                Text(L("\(d.available.formattedBytes) free · \(d.total.formattedBytes)")).font(.caption).foregroundStyle(.secondary)
             }
             if state.junkReady {
                 let junk = state.safeJunkTotal
@@ -98,21 +98,21 @@ struct MenuBarContent: View {
                     Button {
                         open(.junk)
                     } label: {
-                        Label("\(junk.formattedBytes) güvenle temizlenebilir", systemImage: "sparkles")
+                        Label(L("\(junk.formattedBytes) safe to clean"), systemImage: "sparkles")
                     }
                     .buttonStyle(.link)
                 }
             }
             Divider()
-            Button("CleanMac'i Aç") { open(.assistant) }
-            Button("Tam Analizi Başlat") {
+            Button(L("Open CleanMac")) { open(.assistant) }
+            Button(L("Start Full Analysis")) {
                 open(.assistant)
                 Task { await state.runFullAnalysis() }
             }
             .disabled(state.isAnalyzing || state.isScanning)
             Divider()
-            SettingsLink { Text("Ayarlar…") }
-            Button("Çıkış") { NSApp.terminate(nil) }
+            SettingsLink { Text(L("Settings…")) }
+            Button(L("Quit")) { NSApp.terminate(nil) }
         }
         .padding(14)
         .frame(width: 270)
@@ -132,29 +132,44 @@ struct SettingsView: View {
     @AppStorage(Prefs.lowSpaceThreshold) private var threshold = 10
     @AppStorage("permanentDelete") private var permanentDelete = false
     @AppStorage(Prefs.showSplash) private var showSplash = true
+    @State private var language = AppLanguage.current
 
     var body: some View {
         Form {
-            Section("Görünüm") {
-                Toggle("Açılışta karşılama ekranını göster", isOn: $showSplash)
+            Section(L("Language")) {
+                Picker(L("Language"), selection: $language) {
+                    ForEach(AppLanguage.allCases) { Text($0.title).tag($0) }
+                }
+                .onChange(of: language) { AppLanguage.save(language) }
+                if language != AppLanguage.active {
+                    HStack {
+                        Text(L("Restart CleanMac to apply the new language."))
+                            .font(.caption).foregroundStyle(.secondary)
+                        Spacer()
+                        Button(L("Restart Now")) { AppLanguage.relaunch() }
+                    }
+                }
             }
-            Section("Menü çubuğu") {
-                Toggle("Menü çubuğunda boş alanı göster", isOn: $menuBarEnabled)
-                Text("Açıkken pencere kapatılsa da CleanMac menü çubuğunda çalışmaya devam eder.")
+            Section(L("Appearance")) {
+                Toggle(L("Show the welcome screen at launch"), isOn: $showSplash)
+            }
+            Section(L("Menu bar")) {
+                Toggle(L("Show free space in the menu bar"), isOn: $menuBarEnabled)
+                Text(L("When on, CleanMac keeps running in the menu bar even after the window is closed."))
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Section("Uyarılar") {
-                Toggle("Boş alan azalınca bildirim gönder", isOn: $lowSpaceAlerts)
+            Section(L("Alerts")) {
+                Toggle(L("Notify me when free space is low"), isOn: $lowSpaceAlerts)
                     .onChange(of: lowSpaceAlerts) { if lowSpaceAlerts { SpaceMonitor.requestPermission() } }
-                Picker("Eşik", selection: $threshold) {
-                    ForEach([5, 10, 15, 20, 25], id: \.self) { Text("%\($0) boş alanın altı").tag($0) }
+                Picker(L("Threshold"), selection: $threshold) {
+                    ForEach([5, 10, 15, 20, 25], id: \.self) { Text(L("Below \($0)% free space")).tag($0) }
                 }
                 .disabled(!lowSpaceAlerts)
-                Text("Boş alan 5 dakikada bir kontrol edilir; günde en fazla bir bildirim gönderilir.")
+                Text(L("Free space is checked every 5 minutes; at most one notification is sent per day."))
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Section("Temizlik") {
-                Toggle("Gereksiz dosyaları kalıcı sil (Çöp Kutusu'nu atla)", isOn: $permanentDelete)
+            Section(L("Cleanup")) {
+                Toggle(L("Delete junk files permanently (skip the Trash)"), isOn: $permanentDelete)
             }
         }
         .formStyle(.grouped)
@@ -164,7 +179,7 @@ struct SettingsView: View {
 }
 
 extension Int64 {
-    /// Menü çubuğu için kısa biçim, ör. "24 GB".
+    /// Short format for the menu bar, e.g. "24 GB".
     var compactBytes: String {
         let f = ByteCountFormatter()
         f.countStyle = .file

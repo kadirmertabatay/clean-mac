@@ -5,8 +5,8 @@ enum JunkSafety {
 
     var title: String {
         switch self {
-        case .safe: "Güvenli"
-        case .review: "Gözden geçir"
+        case .safe: L("Safe")
+        case .review: L("Needs review")
         }
     }
 }
@@ -25,15 +25,15 @@ struct JunkCategory: Identifiable {
     let detail: String
     let icon: String
     let safety: JunkSafety
-    /// Çöp Kutusu gibi yalnızca kalıcı silinebilen kategoriler.
+    /// Categories that can only be deleted permanently, such as the Trash.
     let permanentOnly: Bool
     var items: [JunkItem]
-    /// Var olan ama izin olmadığı için okunamayan konumlar.
+    /// Locations that exist but can't be read due to missing permissions.
     var deniedPaths: [String] = []
     var size: Int64 { items.reduce(0) { $0 + $1.size } }
 }
 
-/// Bilinen önbellek, günlük ve geliştirici artığı konumlarını tarar.
+/// Scans known cache, log and developer-leftover locations.
 enum JunkScanner {
     enum Source {
         case childrenOf([String])
@@ -56,50 +56,50 @@ enum JunkScanner {
     static let oldDownloadDays = 90
 
     static let definitions: [Definition] = [
-        Definition(id: "caches", title: "Uygulama Önbellekleri",
-                   detail: "Uygulamaların geçici önbellek dosyaları. Silinince uygulamalar gerektiğinde yeniden oluşturur.",
+        Definition(id: "caches", title: L("App Caches"),
+                   detail: L("Temporary cache files of apps. Apps recreate them when needed."),
                    icon: "archivebox", safety: .safe, source: .childrenOf(["~/Library/Caches"])),
-        Definition(id: "logs", title: "Günlük (Log) Dosyaları",
-                   detail: "Uygulamaların tuttuğu kayıtlar. Sorun giderme dışında işe yaramaz, güvenle silinebilir.",
+        Definition(id: "logs", title: L("Log Files"),
+                   detail: L("Records kept by apps. Not useful except for troubleshooting; safe to delete."),
                    icon: "doc.text.magnifyingglass", safety: .safe, source: .childrenOf(["~/Library/Logs"])),
         Definition(id: "xcode-derived", title: "Xcode DerivedData",
-                   detail: "Xcode derleme ara çıktıları. Projeler ilk derlemede yeniden oluşturur.",
+                   detail: L("Intermediate Xcode build output. Projects recreate it on the next build."),
                    icon: "hammer", safety: .safe, source: .childrenOf(["~/Library/Developer/Xcode/DerivedData"])),
-        Definition(id: "device-support", title: "Cihaz Destek Dosyaları",
-                   detail: "iOS / watchOS cihaz sembolleri. Cihaz tekrar bağlandığında yeniden indirilir.",
+        Definition(id: "device-support", title: L("Device Support Files"),
+                   detail: L("iOS / watchOS device symbols. Downloaded again when the device is reconnected."),
                    icon: "iphone", safety: .safe,
                    source: .childrenOf(["~/Library/Developer/Xcode/iOS DeviceSupport",
                                         "~/Library/Developer/Xcode/watchOS DeviceSupport",
                                         "~/Library/Developer/Xcode/tvOS DeviceSupport",
                                         "~/Library/Developer/Xcode/visionOS DeviceSupport"])),
-        Definition(id: "simulator-caches", title: "Simülatör Önbellekleri",
-                   detail: "iOS Simülatörü önbellekleri. Gerektiğinde yeniden oluşturulur.",
+        Definition(id: "simulator-caches", title: L("Simulator Caches"),
+                   detail: L("iOS Simulator caches. Recreated when needed."),
                    icon: "ipad.and.iphone", safety: .safe,
                    source: .childrenOf(["~/Library/Developer/CoreSimulator/Caches"])),
-        Definition(id: "package-caches", title: "Paket Yöneticisi Önbellekleri",
-                   detail: "npm, pnpm, Gradle, Cargo, Bun ve Go indirme önbellekleri. Gerektiğinde yeniden indirilir.",
+        Definition(id: "package-caches", title: L("Package Manager Caches"),
+                   detail: L("npm, pnpm, Gradle, Cargo, Bun and Go download caches. Downloaded again when needed."),
                    icon: "shippingbox", safety: .safe,
                    source: .paths(["~/.npm/_cacache", "~/Library/pnpm/store", "~/.gradle/caches",
                                    "~/.cargo/registry/cache", "~/.bun/install/cache", "~/go/pkg/mod/cache/download"])),
-        Definition(id: "dot-cache", title: "Genel Önbellek Klasörü (~/.cache)",
-                   detail: "Komut satırı araçlarının önbellekleri. İndirilmiş yapay zekâ modelleri gibi büyük ama yeniden indirilebilir veriler olabilir.",
+        Definition(id: "dot-cache", title: L("General Cache Folder (~/.cache)"),
+                   detail: L("Caches of command-line tools. May contain large but re-downloadable data such as AI models."),
                    icon: "tray.full", safety: .review, source: .childrenOf(["~/.cache"])),
-        Definition(id: "installers", title: "İndirilenlerdeki Kurulum Dosyaları",
-                   detail: "~/Downloads içindeki .dmg, .pkg, .xip, .iso dosyaları. Kurulum bittiyse genellikle gereksizdir.",
+        Definition(id: "installers", title: L("Installers in Downloads"),
+                   detail: L(".dmg, .pkg, .xip and .iso files in ~/Downloads. Usually unnecessary once installed."),
                    icon: "opticaldiscdrive", safety: .review, source: .downloads(installers: true)),
-        Definition(id: "old-downloads", title: "Eski İndirmeler",
-                   detail: "~/Downloads içinde \(oldDownloadDays) günden uzun süredir duran öğeler.",
+        Definition(id: "old-downloads", title: L("Old Downloads"),
+                   detail: L("Items that have been sitting in ~/Downloads for more than \(oldDownloadDays) days."),
                    icon: "clock.arrow.circlepath", safety: .review, source: .downloads(installers: false)),
-        Definition(id: "xcode-archives", title: "Xcode Arşivleri",
-                   detail: "Yayınlanmış uygulama arşivleri. Eski sürümlerin sembollerine ihtiyacın yoksa silinebilir.",
+        Definition(id: "xcode-archives", title: L("Xcode Archives"),
+                   detail: L("Archives of published apps. Can be deleted if you don’t need symbols for old versions."),
                    icon: "archivebox.circle", safety: .review,
                    source: .childrenOf(["~/Library/Developer/Xcode/Archives"])),
-        Definition(id: "ios-backups", title: "iPhone / iPad Yedekleri",
-                   detail: "Finder ile alınmış yerel cihaz yedekleri. Eski cihazlara ait olanları silebilirsin.",
+        Definition(id: "ios-backups", title: L("iPhone / iPad Backups"),
+                   detail: L("Local device backups made with Finder. You can delete the ones for old devices."),
                    icon: "externaldrive.badge.timemachine", safety: .review,
                    source: .childrenOf(["~/Library/Application Support/MobileSync/Backup"])),
-        Definition(id: "trash", title: "Çöp Kutusu",
-                   detail: "Çöpe taşınan dosyalar hâlâ yer kaplar. Boşaltmak kalıcıdır. (Görmek için Tam Disk Erişimi gerekebilir.)",
+        Definition(id: "trash", title: L("Trash"),
+                   detail: L("Files moved to the Trash still take up space. Emptying it is permanent. (Full Disk Access may be required to see it.)"),
                    icon: "trash", safety: .safe, permanentOnly: true, source: .childrenOf(["~/.Trash"])),
     ]
 

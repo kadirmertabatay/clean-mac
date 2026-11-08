@@ -21,7 +21,7 @@ final class SmartCleanupTests: XCTestCase {
     }
 
     func testShortAppNamesDoNotOvermatch() throws {
-        // "Code" gibi kısa adlar yol bileşeni olarak bile eşleşmemeli; VS Code bilinen takma adlarla korunur.
+        // Short names like "Code" must not match even as a path component; VS Code is protected through known aliases.
         let code = try XCTUnwrap(ProtectionCatalog.appProtections([app("Code", "com.example.code")]).first)
         XCTAssertFalse(code.matches(home + "/codes/projects/x/node_modules"))
         let vscode = try XCTUnwrap(ProtectionCatalog.appProtections([app("Visual Studio Code", "com.microsoft.VSCode")]).first)
@@ -35,7 +35,7 @@ final class SmartCleanupTests: XCTestCase {
         XCTAssertFalse(desktop.matches(home + "/DesktopBackup/b.dmg"))
 
         let chrome = ProtectionCatalog.appProtections([app("Google Chrome", "com.google.Chrome")])[0]
-        let group = SmartPlanGroup(id: "g", title: "Önbellek", detail: "", icon: "x", items: [
+        let group = SmartPlanGroup(id: "g", title: L("Cache"), detail: "", icon: "x", items: [
             SmartPlanItem(url: URL(fileURLWithPath: "/nonexistent-cleanmac/Library/Caches/Google"), size: 100),
             SmartPlanItem(url: URL(fileURLWithPath: "/nonexistent-cleanmac/Library/Caches/Google/Chrome"), size: 500),
             SmartPlanItem(url: URL(fileURLWithPath: "/nonexistent-cleanmac/Library/Caches/com.spotify.client"), size: 300),
@@ -44,8 +44,8 @@ final class SmartCleanupTests: XCTestCase {
         ], regenerable: true)
         let r = SmartPlanner.filter([group], protections: [chrome, desktop], isExcluded: { $0.hasSuffix("keep-me") })
         XCTAssertEqual(r.groups.first?.items.map(\.url.lastPathComponent), ["Google", "com.spotify.client"],
-                       "Bu yollar diskte yok; alt öğe kontrolü yalnızca gerçek klasörlerde çalışır")
-        XCTAssertEqual(r.protected.map(\.title), ["Google Chrome", "Masaüstü", "Hariç tutulanlar"])
+                       "These paths don’t exist on disk; the child check only works on real folders")
+        XCTAssertEqual(r.protected.map(\.title), ["Google Chrome", L("Desktop"), L("Exclusions")])
     }
 
     func testVendorFolderContainingProtectedAppIsProtected() throws {
@@ -57,18 +57,18 @@ final class SmartCleanupTests: XCTestCase {
         let chrome = ProtectionCatalog.appProtections([app("Google Chrome", "com.google.Chrome")])[0]
         XCTAssertEqual(Protection.protecting(vendor.path, in: [chrome])?.id, chrome.id)
         XCTAssertNil(Protection.protecting(base.appendingPathComponent("Caches/Other").path, in: [chrome]))
-        // Korunan bir alanı içeren üst klasör de korunur.
-        let desktop = Protection(id: "d", title: "Masaüstü", icon: "", group: .areas, paths: [base.path + "/Caches/Other/Desk"])
+        // A parent folder containing a protected area is protected too.
+        let desktop = Protection(id: "d", title: L("Desktop"), icon: "", group: .areas, paths: [base.path + "/Caches/Other/Desk"])
         XCTAssertNotNil(Protection.protecting(base.appendingPathComponent("Caches/Other").path, in: [desktop]))
     }
 
     func testRealMachineChromeProtectionReadOnly() async throws {
         let apps = AppInventory.installedApps()
         guard let chrome = ProtectionCatalog.appProtections(apps).first(where: { $0.id == "app.com.google.chrome" }) else {
-            throw XCTSkip("Chrome yüklü değil")
+            throw XCTSkip("Chrome is not installed")
         }
         let caches = await JunkScanner.scanAll().flatMap(\.items)
         let hit = caches.filter { Protection.protecting($0.id, in: [chrome]) != nil }
-        print("[smart] Chrome koruması \(hit.count) öğeyi (\(hit.reduce(Int64(0)) { $0 + $1.size }.formattedBytes)) korur: \(hit.map(\.name).prefix(5))")
+        print("[smart] Chrome protection covers \(hit.count) items (\(hit.reduce(Int64(0)) { $0 + $1.size }.formattedBytes)): \(hit.map(\.name).prefix(5))")
     }
 }

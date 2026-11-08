@@ -1,6 +1,6 @@
 import Foundation
 
-/// Geliştirici araçlarının kendi temizlik komutları. Her biri önce prova (dry-run) ile ne yapılacağını gösterir.
+/// Developer tools' own cleanup commands. Each first shows what it would do with a dry run.
 enum DevTools {
     // MARK: Homebrew
 
@@ -30,12 +30,12 @@ enum DevTools {
     }
 
     static func brewCleanup() -> String? {
-        guard let brew = brewPath else { return "Homebrew bulunamadı." }
+        guard let brew = brewPath else { return L("Homebrew not found.") }
         let out = Shell.run(brew, ["cleanup", "-s"], env: brewEnv)
         return out.status == 0 ? nil : out.stderr.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    // MARK: Xcode simülatörleri
+    // MARK: Xcode simulators
 
     struct Simulator: Identifiable {
         let udid: String
@@ -49,7 +49,7 @@ enum DevTools {
         FileManager.default.fileExists(atPath: "/Applications/Xcode.app") || FileManager.default.fileExists(atPath: "/Library/Developer/CommandLineTools")
     }
 
-    /// Yüklü olmayan bir çalışma zamanına ait (artık açılamayan) simülatörler.
+    /// Simulators that belong to a runtime that is no longer installed (and can't be launched).
     static func unavailableSimulators() -> [Simulator] {
         guard hasSimctl else { return [] }
         let out = Shell.run("/usr/bin/xcrun", ["simctl", "list", "devices", "unavailable", "-j"])
@@ -85,7 +85,7 @@ enum DevTools {
     struct DockerReport {
         let running: Bool
         let usage: [DockerUsage]
-        /// Docker'ın sanal disk dosyasının diskte kapladığı alan (daemon kapalıyken de ölçülebilir).
+        /// Disk space used by Docker's virtual disk file (measurable even while the daemon is stopped).
         let diskImageSize: Int64
     }
 
@@ -109,16 +109,16 @@ enum DevTools {
         return DockerReport(running: true, usage: usage, diskImageSize: imageSize)
     }
 
-    /// Durmuş konteynerler, kullanılmayan ağlar, sarkan imajlar ve derleme önbelleği. `allImages` ile kullanılmayan tüm imajlar.
+    /// Stopped containers, unused networks, dangling images and the build cache. With `allImages`, all unused images.
     static func dockerPrune(allImages: Bool) -> String? {
-        guard let docker = dockerPath else { return "Docker bulunamadı." }
+        guard let docker = dockerPath else { return L("Docker not found.") }
         let out = Shell.run(docker, ["system", "prune", "-f"] + (allImages ? ["-a"] : []))
         return out.status == 0 ? nil : out.stderr.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    // MARK: Projeler
+    // MARK: Projects
 
-    /// Bağımlılık klasörünün ait olduğu projedeki son değişiklik (bağımlılık klasörünün kendisi hariç).
+    /// Last change in the project a dependency folder belongs to (excluding the dependency folder itself).
     static func projectLastActivity(_ artifact: URL) -> Date? {
         let project = artifact.deletingLastPathComponent()
         let items = (try? FileManager.default.contentsOfDirectory(at: project, includingPropertiesForKeys: [.contentModificationDateKey],

@@ -12,8 +12,17 @@ struct DockerView: View {
     @State private var starting = false
 
     enum Tab: String, CaseIterable, Identifiable {
-        case summary = "Özet", images = "İmajlar", containers = "Konteynerler", volumes = "Birimler", cache = "Derleme Önbelleği"
+        case summary, images, containers, volumes, cache
         var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .summary: L("Summary")
+            case .images: L("Images")
+            case .containers: L("Containers")
+            case .volumes: L("Volumes")
+            case .cache: L("Build Cache")
+            }
+        }
     }
 
     struct Pending: Identifiable {
@@ -26,12 +35,12 @@ struct DockerView: View {
     var body: some View {
         VStack(spacing: 0) {
             PageHeader(title: "Docker", subtitle: subtitle) {
-                Button { Task { await state.loadDocker() } } label: { Label("Yenile", systemImage: "arrow.clockwise") }
+                Button { Task { await state.loadDocker() } } label: { Label(L("Refresh"), systemImage: "arrow.clockwise") }
                     .disabled(state.isLoadingDocker || busy)
             }
             if state.dockerSnapshot != nil {
                 Picker("", selection: $tab) {
-                    ForEach(Tab.allCases) { Text($0.rawValue).tag($0) }
+                    ForEach(Tab.allCases) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
@@ -40,7 +49,7 @@ struct DockerView: View {
             }
             Divider()
             if state.isLoadingDocker && state.dockerSnapshot == nil {
-                ProgressView("Docker okunuyor…").frame(maxWidth: .infinity, maxHeight: .infinity)
+                ProgressView(L("Reading Docker…")).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let snap = state.dockerSnapshot {
                 let f = DockerService.analyze(snap)
                 switch tab {
@@ -58,13 +67,13 @@ struct DockerView: View {
         .overlay { if busy { ProgressView().controlSize(.large).padding(30).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12)) } }
         .confirmationDialog(pending?.title ?? "", isPresented: Binding(get: { pending != nil }, set: { if !$0 { pending = nil } }),
                             presenting: pending) { p in
-            Button("Sil", role: .destructive) { execute(p) }
+            Button(L("Delete"), role: .destructive) { execute(p) }
         } message: { p in Text(p.message) }
     }
 
     private var subtitle: String {
-        guard let s = state.dockerSnapshot else { return "Docker Desktop çalışmıyor" }
-        return "Çalışıyor · \(Set(s.images.map(\.imageID)).count) imaj · \(s.containers.count) konteyner · \(s.volumes.count) birim"
+        guard let s = state.dockerSnapshot else { return L("Docker Desktop isn’t running") }
+        return L("Running · \(Set(s.images.map(\.imageID)).count) images · \(s.containers.count) containers · \(s.volumes.count) volumes")
     }
 
     private func execute(_ p: Pending) {
@@ -75,22 +84,22 @@ struct DockerView: View {
             busy = false
             imageSel = []; containerSel = []; volumeSel = []
             if outcome.errors.isEmpty {
-                state.showToast("\(outcome.removed) öğe silindi.")
+                state.showToast(L("\(outcome.removed) items deleted."))
             } else {
-                state.showToast("\(outcome.removed) silindi, \(outcome.errors.count) hata: \(outcome.errors[0])", isError: true)
+                state.showToast(L("\(outcome.removed) deleted, \(outcome.errors.count) errors: \(outcome.errors[0])"), isError: true)
             }
             await state.loadDocker()
             state.refreshDisk()
         }
     }
 
-    // MARK: Docker kapalı
+    // MARK: Docker stopped
 
     private var notRunning: some View {
         VStack(spacing: 14) {
             Image(systemName: "cube.box").font(.system(size: 46, weight: .light)).foregroundStyle(.secondary)
-            Text("Docker Desktop çalışmıyor").font(.title2.bold())
-            Text("İmajları, konteynerleri ve birimleri görmek için Docker'ın açık olması gerekir. Sanal disk şu an \(DiskScanner.allocatedSize(of: DockerService.diskImageURL).formattedBytes) yer kaplıyor.")
+            Text(L("Docker Desktop isn’t running")).font(.title2.bold())
+            Text(L("Docker needs to be running to show images, containers and volumes. Its virtual disk currently takes up \(DiskScanner.allocatedSize(of: DockerService.diskImageURL).formattedBytes)."))
                 .multilineTextAlignment(.center).foregroundStyle(.secondary).frame(maxWidth: 440)
             Button {
                 starting = true
@@ -99,14 +108,14 @@ struct DockerView: View {
                     starting = false
                 }
             } label: {
-                if starting { ProgressView().controlSize(.small) } else { Text("Docker'ı Başlat") }
+                if starting { ProgressView().controlSize(.small) } else { Text(L("Start Docker")) }
             }
             .buttonStyle(.borderedProminent).controlSize(.large).disabled(starting)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // MARK: Özet
+    // MARK: Summary
 
     private func summary(_ s: DockerService.Snapshot, _ f: DockerService.Findings) -> some View {
         let unusedImageBytes = Dictionary(grouping: f.dangling + f.unusedImages, by: \.imageID).values.reduce(Int64(0)) { $0 + ($1.first?.size ?? 0) }
@@ -115,51 +124,51 @@ struct DockerView: View {
         return ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(spacing: 14) {
-                    tile("Sanal disk (macOS'ta)", s.diskImageSize.formattedBytes, .blue)
-                    tile("İçerik", s.usedTotal.formattedBytes, .purple)
-                    tile("Temizlenebilir", reclaim.formattedBytes, .orange)
+                    tile(L("Virtual disk (on macOS)"), s.diskImageSize.formattedBytes, .blue)
+                    tile(L("Contents"), s.usedTotal.formattedBytes, .purple)
+                    tile(L("Reclaimable"), reclaim.formattedBytes, .orange)
                 }
-                finding(icon: "questionmark.square.dashed", title: "Etiketsiz (sarkan) imajlar", items: f.dangling.map(\.displayName),
+                finding(icon: "questionmark.square.dashed", title: L("Dangling (untagged) images"), items: f.dangling.map(\.displayName),
                         size: Dictionary(grouping: f.dangling, by: \.imageID).values.reduce(0) { $0 + ($1.first?.size ?? 0) },
-                        explanation: "Yeni bir derleme aynı adı aldığında geride kalan eski katmanlar. Güvenle silinebilir.") {
-                    Pending(title: "\(f.dangling.count) etiketsiz imaj silinsin mi?", message: "Hiçbir konteyner kullanmıyor.",
+                        explanation: L("Old layers left behind when a new build takes the same name. Safe to delete.")) {
+                    Pending(title: L("Delete \(f.dangling.count) untagged images?"), message: L("Not used by any container."),
                             action: { DockerService.removeImages(f.dangling) })
                 }
-                finding(icon: "clock.arrow.circlepath", title: "Eski sürümler", items: f.oldVersions.map(\.displayName),
+                finding(icon: "clock.arrow.circlepath", title: L("Old versions"), items: f.oldVersions.map(\.displayName),
                         size: f.oldVersions.reduce(0) { $0 + $1.size },
-                        explanation: "Aynı deponun daha yeni bir sürümü varken kullanılmayan eski imajlar.") {
-                    Pending(title: "\(f.oldVersions.count) eski sürüm silinsin mi?", message: f.oldVersions.map(\.displayName).joined(separator: "\n"),
+                        explanation: L("Old images that aren’t used while a newer version of the same repository exists.")) {
+                    Pending(title: L("Delete \(f.oldVersions.count) old versions?"), message: f.oldVersions.map(\.displayName).joined(separator: "\n"),
                             action: { DockerService.removeImages(f.oldVersions) })
                 }
-                finding(icon: "doc.on.doc", title: "Aynı imajın birden fazla etiketi", items: f.duplicateTags.map { $0.map(\.displayName).joined(separator: " = ") },
+                finding(icon: "doc.on.doc", title: L("Multiple tags for the same image"), items: f.duplicateTags.map { $0.map(\.displayName).joined(separator: " = ") },
                         size: nil,
-                        explanation: "Aynı içeriğe işaret eden etiketler; ek yer kaplamazlar. Fazladan etiketleri İmajlar sekmesinden kaldırabilirsin.", action: nil)
-                finding(icon: "square.stack.3d.down.right", title: "Kullanılmayan imajlar", items: f.unusedImages.map(\.displayName),
+                        explanation: L("Tags that point to the same content; they take no extra space. You can remove extra tags from the Images tab."), action: nil)
+                finding(icon: "square.stack.3d.down.right", title: L("Unused images"), items: f.unusedImages.map(\.displayName),
                         size: Dictionary(grouping: f.unusedImages, by: \.imageID).values.reduce(0) { $0 + ($1.first?.size ?? 0) },
-                        explanation: "Hiçbir konteynerin (çalışan ya da durmuş) kullanmadığı imajlar. Gerekirse yeniden indirilebilir.") {
-                    Pending(title: "\(f.unusedImages.count) kullanılmayan imaj silinsin mi?", message: "Gerektiğinde docker pull ile yeniden indirilebilir.",
+                        explanation: L("Images not used by any container (running or stopped). They can be pulled again if needed.")) {
+                    Pending(title: L("Delete \(f.unusedImages.count) unused images?"), message: L("They can be pulled again with docker pull when needed."),
                             action: { DockerService.removeImages(f.unusedImages) })
                 }
-                finding(icon: "stop.circle", title: "Durmuş konteynerler", items: f.stoppedContainers.map { "\($0.name) (\($0.image))" },
+                finding(icon: "stop.circle", title: L("Stopped containers"), items: f.stoppedContainers.map { "\($0.name) (\($0.image))" },
                         size: f.stoppedContainers.reduce(0) { $0 + $1.size },
-                        explanation: "Çalışmayan konteynerler. İçlerine yazılmış ama birime kaydedilmemiş veriler silinir.") {
-                    Pending(title: "\(f.stoppedContainers.count) durmuş konteyner silinsin mi?",
-                            message: "Konteyner içindeki (birim dışı) değişiklikler kaybolur.",
+                        explanation: L("Containers that aren’t running. Data written inside them but not saved to a volume is deleted.")) {
+                    Pending(title: L("Delete \(f.stoppedContainers.count) stopped containers?"),
+                            message: L("Changes inside the containers (outside volumes) will be lost."),
                             action: { DockerService.removeContainers(f.stoppedContainers) })
                 }
-                finding(icon: "externaldrive.badge.xmark", title: "Hiçbir konteynere bağlı olmayan birimler",
+                finding(icon: "externaldrive.badge.xmark", title: L("Volumes not attached to any container"),
                         items: f.orphanVolumes.map { "\($0.displayName) · \($0.size.formattedBytes)" },
                         size: f.orphanVolumes.reduce(0) { $0 + $1.size },
-                        explanation: "Anonim birimler genellikle silinmiş konteynerlerden kalır. Adlı birimler veritabanı gibi kalıcı veriler içerebilir; Birimler sekmesinden tek tek seçmeni öneririm.") {
+                        explanation: L("Anonymous volumes are usually left over from deleted containers. Named volumes may hold persistent data like databases; I recommend selecting them one by one in the Volumes tab.")) {
                     let anon = f.orphanVolumes.filter(\.isAnonymous)
-                    return anon.isEmpty ? nil : Pending(title: "\(anon.count) anonim birim silinsin mi?",
-                                                        message: "Yalnızca anonim birimler silinir; adlı birimlere dokunulmaz. Bu işlem geri alınamaz.",
+                    return anon.isEmpty ? nil : Pending(title: L("Delete \(anon.count) anonymous volumes?"),
+                                                        message: L("Only anonymous volumes are deleted; named volumes aren’t touched. This can’t be undone."),
                                                         action: { DockerService.removeVolumes(anon) })
                 }
-                finding(icon: "hammer", title: "Derleme önbelleği", items: f.reclaimableCache.prefix(5).map { "\($0.description.isEmpty ? $0.id : $0.description)" },
+                finding(icon: "hammer", title: L("Build cache"), items: f.reclaimableCache.prefix(5).map { "\($0.description.isEmpty ? $0.id : $0.description)" },
                         size: f.reclaimableCache.reduce(0) { $0 + $1.size },
-                        explanation: "docker build ara katmanları. Silinirse sonraki derleme biraz uzun sürer.") {
-                    Pending(title: "Kullanılmayan derleme önbelleği temizlensin mi?", message: "`docker builder prune` çalışacak.",
+                        explanation: L("Intermediate docker build layers. If deleted, the next build takes a little longer.")) {
+                    Pending(title: L("Clean up the unused build cache?"), message: L("Runs `docker builder prune`."),
                             action: { DockerService.pruneBuildCache() })
                 }
                 slackCard(s, f)
@@ -199,7 +208,7 @@ struct DockerView: View {
                 VStack(alignment: .trailing, spacing: 6) {
                     if let size, !items.isEmpty { Text(size.formattedBytes).font(.headline).monospacedDigit() }
                     if let action, !items.isEmpty {
-                        Button("Temizle") { pending = action() }.disabled(busy)
+                        Button(L("Clean")) { pending = action() }.disabled(busy)
                     }
                 }
             }
@@ -212,12 +221,12 @@ struct DockerView: View {
                 Image(systemName: "arrow.down.right.and.arrow.up.left").font(.title3)
                     .foregroundStyle(f.diskImageSlack > 2_000_000_000 ? Color.orange : Color.green).frame(width: 26)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Sanal disk alanı").font(.headline)
-                    Text("Docker'ın sanal diski macOS'ta \(s.diskImageSize.formattedBytes) kaplıyor, içeriği \(s.usedTotal.formattedBytes). Silinen verinin yeri her zaman hemen geri verilmez; \"Küçült\" sanal makinedeki boş blokları macOS'a iade eder (veri silmez, küçük bir alpine imajı kullanır).")
+                    Text(L("Virtual disk space")).font(.headline)
+                    Text(L("Docker’s virtual disk takes up \(s.diskImageSize.formattedBytes) on macOS, with \(s.usedTotal.formattedBytes) of content. Space from deleted data isn’t always returned right away; “Shrink” gives free blocks in the virtual machine back to macOS (it doesn’t delete data and uses a small alpine image)."))
                         .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer()
-                Button("Küçült") {
+                Button(L("Shrink")) {
                     busy = true
                     Task {
                         let before = s.diskImageSize
@@ -225,8 +234,8 @@ struct DockerView: View {
                         busy = false
                         await state.loadDocker()
                         let after = state.dockerSnapshot?.diskImageSize ?? before
-                        if let e = r.errors.first { state.showToast("Küçültülemedi: \(e)", isError: true) }
-                        else { state.showToast("Sanal disk \(before.formattedBytes) → \(after.formattedBytes)") }
+                        if let e = r.errors.first { state.showToast(L("Couldn’t shrink: \(e)"), isError: true) }
+                        else { state.showToast(L("Virtual disk \(before.formattedBytes) → \(after.formattedBytes)")) }
                         state.refreshDisk()
                     }
                 }
@@ -235,7 +244,7 @@ struct DockerView: View {
         }
     }
 
-    // MARK: Sekmeler
+    // MARK: Tabs
 
     private func imagesTab(_ s: DockerService.Snapshot, _ f: DockerService.Findings) -> some View {
         let old = Set(f.oldVersions.map(\.id))
@@ -244,23 +253,23 @@ struct DockerView: View {
         let selected = rows.filter { imageSel.contains($0.id) }
         return VStack(spacing: 0) {
             Table(rows, selection: $imageSel) {
-                TableColumn("İmaj") { i in
+                TableColumn(L("Docker Image")) { i in
                     HStack(spacing: 6) {
                         Text(i.displayName).lineLimit(1).truncationMode(.middle)
-                        if i.isDangling { badge("etiketsiz", .orange) }
-                        if old.contains(i.id) { badge("eski sürüm", .orange) }
-                        if dupIDs.contains(i.imageID) { badge("aynı imaj", .purple) }
-                        if i.containers == 0 && !i.isDangling { badge("kullanılmıyor", .secondary) }
+                        if i.isDangling { badge(L("untagged"), .orange) }
+                        if old.contains(i.id) { badge(L("old version"), .orange) }
+                        if dupIDs.contains(i.imageID) { badge(L("same image"), .purple) }
+                        if i.containers == 0 && !i.isDangling { badge(L("unused"), .secondary) }
                     }
                 }
-                TableColumn("Kimlik") { i in Text(i.shortID).font(.caption.monospaced()).foregroundStyle(.secondary) }.width(110)
-                TableColumn("Boyut") { i in Text(i.size.formattedBytes).monospacedDigit() }.width(90)
-                TableColumn("Konteyner") { i in Text("\(i.containers)") }.width(80)
-                TableColumn("Oluşturma") { i in Text(i.createdSince).foregroundStyle(.secondary) }.width(120)
+                TableColumn(L("ID")) { i in Text(i.shortID).font(.caption.monospaced()).foregroundStyle(.secondary) }.width(110)
+                TableColumn(L("Size")) { i in Text(i.size.formattedBytes).monospacedDigit() }.width(90)
+                TableColumn(L("Container")) { i in Text("\(i.containers)") }.width(80)
+                TableColumn(L("Created")) { i in Text(i.createdSince).foregroundStyle(.secondary) }.width(120)
             }
             bottomBar(toggle: true, count: selected.count, size: selected.reduce(0) { $0 + $1.size }) {
-                pending = Pending(title: "\(selected.count) imaj silinsin mi?",
-                                  message: "Etiketli imajlarda yalnızca seçilen etiket kaldırılır; başka etiketi olmayan imajın katmanları silinir. Konteynerin kullandığı imajlar silinemez.\n\n" + selected.map(\.displayName).joined(separator: "\n"),
+                pending = Pending(title: L("Delete \(selected.count) images?"),
+                                  message: L("For tagged images only the selected tag is removed; the layers of an image with no other tags are deleted. Images used by a container can’t be deleted.\n\n") + selected.map(\.displayName).joined(separator: "\n"),
                                   action: { DockerService.removeImages(selected) })
             }
         }
@@ -271,20 +280,20 @@ struct DockerView: View {
         let selected = rows.filter { containerSel.contains($0.id) && !$0.isRunning }
         return VStack(spacing: 0) {
             Table(rows, selection: $containerSel) {
-                TableColumn("Ad") { c in
+                TableColumn(L("Name")) { c in
                     HStack(spacing: 6) {
                         Circle().fill(c.isRunning ? Color.green : Color.secondary).frame(width: 8, height: 8)
                         Text(c.name)
                     }
                 }
-                TableColumn("İmaj") { c in Text(c.image).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle) }
-                TableColumn("Durum") { c in Text(c.status).foregroundStyle(.secondary) }.width(170)
-                TableColumn("Boyut") { c in Text(c.size.formattedBytes).monospacedDigit() }.width(90)
+                TableColumn(L("Docker Image")) { c in Text(c.image).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle) }
+                TableColumn(L("Status")) { c in Text(c.status).foregroundStyle(.secondary) }.width(170)
+                TableColumn(L("Size")) { c in Text(c.size.formattedBytes).monospacedDigit() }.width(90)
             }
             bottomBar(toggle: true, count: selected.count, size: selected.reduce(0) { $0 + $1.size },
-                      note: "Çalışan konteynerler silinemez; önce Docker'da durdur.") {
-                pending = Pending(title: "\(selected.count) konteyner silinsin mi?",
-                                  message: "Konteyner içindeki (birim dışı) değişiklikler kaybolur.\n\n" + selected.map(\.name).joined(separator: "\n"),
+                      note: L("Running containers can’t be deleted; stop them in Docker first.")) {
+                pending = Pending(title: L("Delete \(selected.count) containers?"),
+                                  message: L("Changes inside the containers (outside volumes) will be lost.\n\n") + selected.map(\.name).joined(separator: "\n"),
                                   action: { DockerService.removeContainers(selected) })
             }
         }
@@ -296,21 +305,21 @@ struct DockerView: View {
         let named = selected.filter { !$0.isAnonymous }
         return VStack(spacing: 0) {
             Table(rows, selection: $volumeSel) {
-                TableColumn("Birim") { v in
+                TableColumn(L("Volume")) { v in
                     HStack(spacing: 6) {
                         Text(v.displayName).lineLimit(1).truncationMode(.middle)
-                        if v.links == 0 { badge("bağlantısız", .orange) }
-                        if !v.isAnonymous { badge("adlı", .blue) }
+                        if v.links == 0 { badge(L("unattached"), .orange) }
+                        if !v.isAnonymous { badge(L("named"), .blue) }
                     }
                 }
-                TableColumn("Boyut") { v in Text(v.size.formattedBytes).monospacedDigit() }.width(90)
-                TableColumn("Bağlı konteyner") { v in Text("\(v.links)") }.width(120)
+                TableColumn(L("Size")) { v in Text(v.size.formattedBytes).monospacedDigit() }.width(90)
+                TableColumn(L("Attached containers")) { v in Text("\(v.links)") }.width(120)
             }
             bottomBar(toggle: true, count: selected.count, size: selected.reduce(0) { $0 + $1.size },
-                      note: "Birimler kalıcı verilerdir (ör. veritabanı). Silmek geri alınamaz.") {
-                pending = Pending(title: "\(selected.count) birim kalıcı olarak silinsin mi?",
-                                  message: (named.isEmpty ? "" : "⚠️ \(named.count) ADLI birim seçili; veritabanı gibi önemli veriler içerebilir.\n\n")
-                                    + "Bu işlem geri alınamaz. Bir konteynerin kullandığı birimler silinemez.\n\n" + selected.map(\.displayName).joined(separator: "\n"),
+                      note: L("Volumes hold persistent data (e.g. databases). Deleting them can’t be undone.")) {
+                pending = Pending(title: L("Permanently delete \(selected.count) volumes?"),
+                                  message: (named.isEmpty ? "" : L("⚠️ \(named.count) NAMED volumes selected; they may contain important data like databases.\n\n"))
+                                    + L("This can’t be undone. Volumes used by a container can’t be deleted.\n\n") + selected.map(\.displayName).joined(separator: "\n"),
                                   action: { DockerService.removeVolumes(selected) })
             }
         }
@@ -319,18 +328,18 @@ struct DockerView: View {
     private func cacheTab(_ s: DockerService.Snapshot) -> some View {
         VStack(spacing: 0) {
             if s.buildCache.isEmpty {
-                EmptyStateView(icon: "checkmark.circle", title: "Derleme önbelleği boş", message: "docker build ara katmanı yok.")
+                EmptyStateView(icon: "checkmark.circle", title: L("Build cache is empty"), message: L("No intermediate docker build layers."))
             } else {
                 Table(s.buildCache) {
-                    TableColumn("Açıklama") { c in Text(c.description.isEmpty ? c.id : c.description).lineLimit(1).truncationMode(.middle) }
-                    TableColumn("Boyut") { c in Text(c.size.formattedBytes).monospacedDigit() }.width(90)
-                    TableColumn("Kullanımda") { c in Text(c.inUse ? "Evet" : "Hayır").foregroundStyle(c.inUse ? .primary : .secondary) }.width(90)
-                    TableColumn("Son kullanım") { c in Text(c.lastUsed).foregroundStyle(.secondary) }.width(130)
+                    TableColumn(L("Description")) { c in Text(c.description.isEmpty ? c.id : c.description).lineLimit(1).truncationMode(.middle) }
+                    TableColumn(L("Size")) { c in Text(c.size.formattedBytes).monospacedDigit() }.width(90)
+                    TableColumn(L("In Use")) { c in Text(c.inUse ? L("Yes") : L("No")).foregroundStyle(c.inUse ? .primary : .secondary) }.width(90)
+                    TableColumn(L("Last Used")) { c in Text(c.lastUsed).foregroundStyle(.secondary) }.width(130)
                 }
                 HStack {
                     Spacer()
-                    Button("Kullanılmayanları Temizle", role: .destructive) {
-                        pending = Pending(title: "Kullanılmayan derleme önbelleği temizlensin mi?", message: "`docker builder prune` çalışacak.",
+                    Button(L("Clean Up Unused"), role: .destructive) {
+                        pending = Pending(title: L("Clean up the unused build cache?"), message: L("Runs `docker builder prune`."),
                                           action: { DockerService.pruneBuildCache() })
                     }
                     .disabled(busy)
@@ -342,11 +351,11 @@ struct DockerView: View {
 
     private func bottomBar(toggle: Bool, count: Int, size: Int64, note: String? = nil, onDelete: @escaping () -> Void) -> some View {
         HStack(spacing: 12) {
-            if toggle { Toggle("Yalnızca kullanılmayanlar", isOn: $unusedOnly).toggleStyle(.checkbox).fixedSize() }
+            if toggle { Toggle(L("Unused only"), isOn: $unusedOnly).toggleStyle(.checkbox).fixedSize() }
             if let note { Text(note).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
             Spacer()
-            if count > 0 { Text("Seçili: \(count) · \(size.formattedBytes)").bold() }
-            Button("Sil", role: .destructive, action: onDelete)
+            if count > 0 { Text(L("Selected: \(count) · \(size.formattedBytes)")).bold() }
+            Button(L("Delete"), role: .destructive, action: onDelete)
                 .buttonStyle(.borderedProminent).tint(.red)
                 .disabled(count == 0 || busy)
         }

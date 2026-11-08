@@ -1,9 +1,9 @@
 import Foundation
 
-/// Docker CLI üzerinden imaj, konteyner, birim ve derleme önbelleğini okur ve siler.
+/// Reads and deletes images, containers, volumes and the build cache through the Docker CLI.
 enum DockerService {
     struct Image: Identifiable, Hashable {
-        let imageID: String     // tam imaj kimliği (sha256:…); aynı imajın etiketleri bunu paylaşır
+        let imageID: String     // full image ID (sha256:…); tags of the same image share it
         let repository: String
         let tag: String
         let size: Int64
@@ -12,11 +12,11 @@ enum DockerService {
         let createdSince: String
 
         var isDangling: Bool { repository == "<none>" || tag == "<none>" }
-        /// Silme için başvuru: etiketliyse "depo:etiket" (yalnız o etiketi kaldırır), değilse kimlik.
+        /// Reference used for deletion: "repo:tag" if tagged (removes only that tag), otherwise the ID.
         var reference: String { isDangling ? imageID : "\(repository):\(tag)" }
-        var displayName: String { isDangling ? "<etiketsiz> \(shortID)" : "\(repository):\(tag)" }
+        var displayName: String { isDangling ? L("<untagged> \(shortID)") : "\(repository):\(tag)" }
         var shortID: String { String(imageID.replacingOccurrences(of: "sha256:", with: "").prefix(12)) }
-        /// Tablo satırı kimliği: her etiket ayrı satırdır.
+        /// Table row ID: every tag is a separate row.
         var id: String { "\(imageID)|\(repository):\(tag)" }
     }
 
@@ -38,7 +38,7 @@ enum DockerService {
         let links: Int
         let isAnonymous: Bool
         var id: String { name }
-        var displayName: String { isAnonymous ? "anonim \(name.prefix(12))…" : name }
+        var displayName: String { isAnonymous ? L("anonymous \(name.prefix(12))…") : name }
     }
 
     struct CacheEntry: Identifiable, Hashable {
@@ -54,13 +54,13 @@ enum DockerService {
         var containers: [Container] = []
         var volumes: [Volume] = []
         var buildCache: [CacheEntry] = []
-        /// Docker'ın sanal disk dosyasının macOS'ta kapladığı gerçek alan.
+        /// The actual space Docker's virtual disk file takes up on macOS.
         var diskImageSize: Int64 = 0
 
         var usedTotal: Int64 {
             uniqueImageSize + containers.reduce(0) { $0 + $1.size } + volumes.reduce(0) { $0 + $1.size } + buildCache.reduce(0) { $0 + $1.size }
         }
-        /// Aynı kimliğe sahip etiketler bir kez sayılır.
+        /// Tags with the same ID are counted once.
         var uniqueImageSize: Int64 {
             Dictionary(grouping: images, by: \.imageID).values.reduce(0) { $0 + ($1.first?.size ?? 0) }
         }
@@ -78,7 +78,7 @@ enum DockerService {
     static let diskImageURL = Paths.home
         .appendingPathComponent("Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw")
 
-    // MARK: Okuma
+    // MARK: Reading
 
     static func load() -> Snapshot? {
         guard let docker = DevTools.dockerPath else { return nil }
@@ -95,13 +95,13 @@ enum DockerService {
 
         let containers = Shell.run(docker, ["ps", "-a", "--size", "--no-trunc", "--format", "{{json .}}"])
         snap.containers = jsonLines(containers.stdout).map { o in
-            // "4.1kB (virtual 17kB)" → yazılabilir katman boyutu
+            // "4.1kB (virtual 17kB)" → writable layer size
             let size = s(o["Size"]).components(separatedBy: " (").first ?? ""
             return Container(id: s(o["ID"]), name: s(o["Names"]), image: s(o["Image"]), state: s(o["State"]),
                              status: s(o["Status"]), size: parseSize(size), created: parseDate(s(o["CreatedAt"])))
         }
 
-        // Birim boyutları ve derleme önbelleği yalnızca ayrıntılı df çıktısında var.
+        // Volume sizes and the build cache are only in the verbose df output.
         let df = Shell.run(docker, ["system", "df", "-v", "--format", "{{json .}}"])
         if let obj = try? JSONSerialization.jsonObject(with: Data(df.stdout.utf8)) as? [String: Any] {
             snap.volumes = (obj["Volumes"] as? [[String: Any]] ?? []).map { v in
@@ -120,19 +120,19 @@ enum DockerService {
         return snap
     }
 
-    // MARK: Analiz
+    // MARK: Analysis
 
     struct Findings {
         let dangling: [Image]
         let unusedImages: [Image]
-        /// Aynı imaj kimliğine ait fazladan etiketler (yer kaplamaz ama karışıklık yaratır).
+        /// Extra tags for the same image ID (take no space but cause confusion).
         let duplicateTags: [[Image]]
-        /// Aynı deponun daha yeni sürümü varken kullanılmayan eski sürümleri.
+        /// Old versions that aren't used while a newer version of the same repository exists.
         let oldVersions: [Image]
         let stoppedContainers: [Container]
         let orphanVolumes: [Volume]
         let reclaimableCache: [CacheEntry]
-        /// Sanal diskin içerikten fazla kapladığı alan.
+        /// Space the virtual disk takes up beyond its contents.
         let diskImageSlack: Int64
     }
 
@@ -157,7 +157,7 @@ enum DockerService {
             diskImageSlack: max(s.diskImageSize - s.usedTotal, 0))
     }
 
-    // MARK: Silme
+    // MARK: Removal
 
     struct Outcome {
         var removed = 0
@@ -167,7 +167,7 @@ enum DockerService {
     private static func run(_ args: [String], items: [String]) -> Outcome {
         guard let docker = DevTools.dockerPath, !items.isEmpty else { return Outcome() }
         var out = Outcome()
-        // Biri başarısız olsa da diğerleri silinsin diye tek tek çalıştırılır.
+        // Run one by one so the others are deleted even if one fails.
         for item in items {
             let r = Shell.run(docker, args + [item])
             if r.status == 0 { out.removed += 1 } else {
@@ -187,7 +187,7 @@ enum DockerService {
         return r.status == 0 ? Outcome(removed: 1) : Outcome(errors: [r.stderr])
     }
 
-    /// Sanal makinedeki boş blokları ana sisteme geri verir (veri silmez).
+    /// Returns free blocks in the virtual machine to the host (doesn't delete data).
     static func trimDiskImage() -> Outcome {
         guard let docker = DevTools.dockerPath else { return Outcome() }
         let r = Shell.run(docker, ["run", "--rm", "--privileged", "--pid=host", "alpine:3.20",
@@ -195,7 +195,7 @@ enum DockerService {
         return r.status == 0 ? Outcome(removed: 1) : Outcome(errors: [r.stderr.trimmingCharacters(in: .whitespacesAndNewlines)])
     }
 
-    // MARK: Yardımcılar
+    // MARK: Helpers
 
     private static func s(_ v: Any?) -> String {
         if let v = v as? String { return v }
@@ -207,7 +207,7 @@ enum DockerService {
         text.split(separator: "\n").compactMap { try? JSONSerialization.jsonObject(with: Data($0.utf8)) as? [String: Any] }
     }
 
-    /// Docker'ın ondalık birimli boyutlarını ("17.1kB", "1.2GB", "0B") bayta çevirir.
+    /// Converts Docker's decimal sizes ("17.1kB", "1.2GB", "0B") to bytes.
     static func parseSize(_ text: String) -> Int64 {
         let t = text.trimmingCharacters(in: .whitespaces)
         guard let r = t.range(of: #"^[\d.]+"#, options: .regularExpression), let n = Double(t[r]) else { return 0 }

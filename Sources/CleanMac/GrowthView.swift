@@ -6,20 +6,20 @@ struct GrowthView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            PageHeader(title: "Ne Büyüdü?", subtitle: "Her taramanın özeti saklanır; alanın nereye gittiğini önceki taramalarla karşılaştırarak bul.") {
-                Button { state.startScan() } label: { Label("Şimdi Tara", systemImage: "arrow.clockwise") }
+            PageHeader(title: L("What Grew?"), subtitle: L("A summary of every scan is kept; compare with earlier scans to find where your space went.")) {
+                Button { state.startScan() } label: { Label(L("Scan Now"), systemImage: "arrow.clockwise") }
                     .disabled(state.isScanning)
             }
             Divider()
             if state.isScanning {
                 ScanningView()
             } else if state.rootNode == nil {
-                EmptyStateView(icon: "chart.line.uptrend.xyaxis", title: "Önce bir tarama gerekli",
-                               message: "Karşılaştırma için \(state.scanRoot.abbreviatedPath) en az iki kez taranmalı. İlk taramadan sonra özet saklanır.",
-                               actionTitle: "Taramayı Başlat") { state.startScan() }
+                EmptyStateView(icon: "chart.line.uptrend.xyaxis", title: L("A scan is needed first"),
+                               message: L("\(state.scanRoot.abbreviatedPath) needs to be scanned at least twice to compare. A summary is saved after the first scan."),
+                               actionTitle: L("Start Scan")) { state.startScan() }
             } else if state.scanSnapshots.count < 2 {
-                EmptyStateView(icon: "clock.badge.checkmark", title: "İlk özet kaydedildi",
-                               message: "\(state.scanRoot.abbreviatedPath) için ilk tarama özeti saklandı. Birkaç gün sonra tekrar tara; neyin büyüdüğünü burada göreceksin.")
+                EmptyStateView(icon: "clock.badge.checkmark", title: L("First summary saved"),
+                               message: L("The first scan summary for \(state.scanRoot.abbreviatedPath) was saved. Scan again in a few days to see what grew here."))
             } else {
                 content
             }
@@ -36,24 +36,24 @@ struct GrowthView: View {
         return ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 HStack(spacing: 14) {
-                    Picker("Karşılaştır:", selection: $baselineIndex) {
+                    Picker(L("Compare:"), selection: $baselineIndex) {
                         ForEach(Array(baselines.enumerated()), id: \.offset) { i, s in
-                            Text(s.date.formatted(date: .abbreviated, time: .shortened) + " (\(s.date.formatted(.relative(presentation: .named))))").tag(i)
+                            Text(s.date.formatted(date: .abbreviated, time: .shortened) + L(" (\(s.date.formatted(.relative(presentation: .named))))")).tag(i)
                         }
                     }
                     .frame(maxWidth: 420)
                     Spacer()
                 }
                 HStack(spacing: 14) {
-                    deltaTile("Toplam değişim", diff.totalDelta)
-                    deltaTile("Büyüyen klasörler", diff.grown.first.map(\.delta) ?? 0, note: diff.grown.first?.url.abbreviatedPath ?? "—")
-                    deltaTile("Yeni büyük dosyalar", diff.newFiles.reduce(0) { $0 + $1.new }, note: "\(diff.newFiles.count) dosya")
+                    deltaTile(L("Total change"), diff.totalDelta)
+                    deltaTile(L("Folders that grew"), diff.grown.first.map(\.delta) ?? 0, note: diff.grown.first?.url.abbreviatedPath ?? "—")
+                    deltaTile(L("New large files"), diff.newFiles.reduce(0) { $0 + $1.new }, note: L("\(diff.newFiles.count) files"))
                 }
-                section("En çok büyüyenler", icon: "arrow.up.right", color: .orange, items: diff.grown, empty: "50 MB'tan fazla büyüyen klasör yok.")
-                section("Yeni büyük dosyalar (100 MB+)", icon: "doc.badge.plus", color: .blue, items: diff.newFiles, empty: "Yeni büyük dosya yok.")
-                section("Küçülenler", icon: "arrow.down.right", color: .green, items: diff.shrunk, empty: "Küçülen klasör yok.")
+                section(L("Grew the most"), icon: "arrow.up.right", color: .orange, items: diff.grown, empty: L("No folders grew by more than 50 MB."))
+                section(L("New large files (100 MB+)"), icon: "doc.badge.plus", color: .blue, items: diff.newFiles, empty: L("No new large files."))
+                section(L("Shrank"), icon: "arrow.down.right", color: .green, items: diff.shrunk, empty: L("No folders shrank."))
                 if !diff.goneFiles.isEmpty {
-                    section("Kaybolan büyük dosyalar", icon: "doc.badge.minus", color: .secondary, items: diff.goneFiles, empty: "")
+                    section(L("Large files that disappeared"), icon: "doc.badge.minus", color: .secondary, items: diff.goneFiles, empty: "")
                 }
             }
             .padding(24)
@@ -96,13 +96,13 @@ struct GrowthView: View {
                             }
                             .contentShape(Rectangle())
                             .contextMenu {
-                                Button("Finder'da Göster") { Finder.reveal([item.url]) }
-                                Button("Klasör Gezgini'nde Aç") { open(item.path) }
+                                Button(L("Show in Finder")) { Finder.reveal([item.url]) }
+                                Button(L("Open in Folder Explorer")) { open(item.path) }
                             }
                             .onTapGesture(count: 2) { open(item.path) }
                         }
                         if items.count > 15 {
-                            Text("… ve \(items.count - 15) öğe daha").font(.caption).foregroundStyle(.secondary)
+                            Text(L("… and \(items.count - 15) more items")).font(.caption).foregroundStyle(.secondary)
                         }
                     }
                 }

@@ -20,10 +20,10 @@ final class DockerTests: XCTestCase {
         var s = DockerService.Snapshot()
         s.images = [
             img("sha256:a", "node", "20", size: 1_000, containers: 1, daysAgo: 1),
-            img("sha256:b", "node", "18", size: 900, daysAgo: 200),            // eski sürüm, kullanılmıyor
-            img("sha256:a", "node", "lts", size: 1_000, containers: 1, daysAgo: 1), // aynı imaj, ikinci etiket
-            img("sha256:c", "<none>", "<none>", size: 300),                    // sarkan
-            img("sha256:d", "redis", "7", size: 200),                          // kullanılmıyor
+            img("sha256:b", "node", "18", size: 900, daysAgo: 200),            // old version, unused
+            img("sha256:a", "node", "lts", size: 1_000, containers: 1, daysAgo: 1), // same image, second tag
+            img("sha256:c", "<none>", "<none>", size: 300),                    // dangling
+            img("sha256:d", "redis", "7", size: 200),                          // unused
         ]
         s.containers = [
             .init(id: "1", name: "web", image: "node:20", state: "running", status: "Up", size: 10, created: nil),
@@ -42,15 +42,15 @@ final class DockerTests: XCTestCase {
         XCTAssertEqual(Set(f.unusedImages.map(\.displayName)), ["node:18", "redis:7"])
         XCTAssertEqual(f.stoppedContainers.map(\.name), ["old"])
         XCTAssertEqual(Set(f.orphanVolumes.map(\.name)), ["pgdata", "abc123"])
-        // Aynı imajın iki etiketi bir kez sayılır: 1000 + 900 + 300 + 200 + konteynerler 30 + birimler 620
+        // Two tags of the same image are counted once: 1000 + 900 + 300 + 200 + containers 30 + volumes 620
         XCTAssertEqual(s.usedTotal, 3_050)
         XCTAssertEqual(f.diskImageSlack, 10_000 - 3_050)
     }
 
-    /// Yalnızca CLEANMAC_DOCKER_TEST=1 ile: gerçek Docker'da test nesneleri oluşturur, bulur ve siler.
+    /// Only with CLEANMAC_DOCKER_TEST=1: creates, finds and deletes test objects in a real Docker.
     func testLiveDockerCleanupOfTestObjects() throws {
         try XCTSkipUnless(ProcessInfo.processInfo.environment["CLEANMAC_DOCKER_TEST"] == "1")
-        try XCTSkipUnless(DockerService.isRunning, "Docker çalışmıyor")
+        try XCTSkipUnless(DockerService.isRunning, "Docker is not running")
         let docker = try XCTUnwrap(DevTools.dockerPath)
         _ = Shell.run(docker, ["pull", "-q", "hello-world"])
         _ = Shell.run(docker, ["tag", "hello-world", "hello-world:cleanmac-test"])
@@ -60,7 +60,7 @@ final class DockerTests: XCTestCase {
 
         let snap = try XCTUnwrap(DockerService.load())
         let f = DockerService.analyze(snap)
-        print("[docker] imaj satırı: \(snap.images.count), konteyner: \(snap.containers.count), birim: \(snap.volumes.count), sanal disk: \(snap.diskImageSize.formattedBytes)")
+        print("[docker] image rows: \(snap.images.count), containers: \(snap.containers.count), volumes: \(snap.volumes.count), virtual disk: \(snap.diskImageSize.formattedBytes)")
         XCTAssertTrue(f.duplicateTags.contains { $0.contains { $0.tag == "cleanmac-test" } })
         let container = try XCTUnwrap(f.stoppedContainers.first { $0.name == "cleanmac-test-container" })
         let volume = try XCTUnwrap(f.orphanVolumes.first { $0.name == "cleanmac-test-vol" })
@@ -74,6 +74,6 @@ final class DockerTests: XCTestCase {
         XCTAssertFalse(after.containers.contains { $0.name == "cleanmac-test-container" })
         XCTAssertFalse(after.images.contains { $0.tag == "cleanmac-test" })
         XCTAssertFalse(after.volumes.contains { $0.name == "cleanmac-test-vol" })
-        XCTAssertTrue(after.images.contains { $0.repository == "hello-world" && $0.tag == "latest" }, "Yalnız etiket kalkmalı")
+        XCTAssertTrue(after.images.contains { $0.repository == "hello-world" && $0.tag == "latest" }, "Only the tag should be removed")
     }
 }

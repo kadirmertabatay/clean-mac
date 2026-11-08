@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Squarified treemap yerleşimi (Bruls, Huizing, van Wijk). Değerler büyükten küçüğe sıralı olmalı.
+/// Squarified treemap layout (Bruls, Huizing, van Wijk). Values must be sorted from largest to smallest.
 enum Treemap {
     static func layout(_ values: [Double], in rect: CGRect) -> [CGRect] {
         var result = [CGRect](repeating: .zero, count: values.count)
@@ -69,7 +69,7 @@ struct TreemapView: View {
         let items = Array(node.children.filter { $0.size > 0 }.prefix(Self.maxItems))
         let rects = Treemap.layout(items.map { Double($0.size) }, in: CGRect(origin: .zero, size: size))
         return zip(items, rects).map { child, rect in
-            // Yeterince büyük klasörlerin içini bir seviye daha göster.
+            // Show one more level inside sufficiently large folders.
             var inner: [(FileNode, CGRect)] = []
             if child.isDirectory, !child.isAggregate, rect.width > 90, rect.height > 60 {
                 let content = rect.insetBy(dx: 3, dy: 3).offsetBy(dx: 0, dy: 8).insetBy(dx: 0, dy: 8)
@@ -112,12 +112,12 @@ struct TreemapView: View {
                 .onTapGesture(count: 2) { open(hovered) }
                 .contextMenu {
                     if let h = hovered, !h.isAggregate {
-                        if h.canDrillDown { Button("Aç") { open(h) } }
-                        Button("Hızlı Bakış") { previewURL = h.url }
-                        Button("Finder'da Göster") { Finder.reveal([h.url]) }
-                        Button("Hariç Tut") { state.addExclusion(h.url) }
+                        if h.canDrillDown { Button(L("Open")) { open(h) } }
+                        Button(L("Quick Look")) { previewURL = h.url }
+                        Button(L("Show in Finder")) { Finder.reveal([h.url]) }
+                        Button(L("Exclude")) { state.addExclusion(h.url) }
                         Divider()
-                        Button("Çöp Kutusu'na Taşı…", role: .destructive) { onRemove(h) }
+                        Button(L("Move to Trash…"), role: .destructive) { onRemove(h) }
                     }
                 }
                 .quickLookPreview($previewURL)

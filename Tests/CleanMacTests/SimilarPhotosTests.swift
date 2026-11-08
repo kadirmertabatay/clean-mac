@@ -12,7 +12,7 @@ final class SimilarPhotosTests: XCTestCase {
 
     override func tearDownWithError() throws { try? FileManager.default.removeItem(at: dir) }
 
-    /// Fotoğrafa benzer bir sahne çizer: gökyüzü gradyanı, güneş, dağlar. `shift` seri çekimi taklit eder.
+    /// Draws a photo-like scene: sky gradient, sun, mountains. `shift` simulates a burst shot.
     func scene(_ name: String, width: Int = 1200, shift: CGFloat = 0, hue: CGFloat = 0.58, quality: Double = 0.9, seed: Int = 0) throws -> URL {
         let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: width, pixelsHigh: width * 3 / 4, bitsPerSample: 8,
                                    samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
@@ -60,7 +60,7 @@ final class SimilarPhotosTests: XCTestCase {
 
     func testDistancesSeparateSimilarFromDifferent() throws {
         let original = try scene("orijinal.jpg")
-        let resaved = try scene("kopya-kucuk.jpg", width: 800)
+        let resaved = try scene("copy-small.jpg", width: 800)
         let burst = try scene("seri-2.jpg", shift: 12)
         let different = try scene("baska.jpg", hue: 0.05, seed: 3)
         let unrelated = try circles("ilgisiz.jpg")
@@ -69,7 +69,7 @@ final class SimilarPhotosTests: XCTestCase {
         let dResaved = SimilarPhotos.distance(fp[0], fp[1])!
         let dBurst = SimilarPhotos.distance(fp[0], fp[2])!
         let dDifferent = SimilarPhotos.distance(fp[0], fp[3])!
-        print("[photos] yeniden kaydedilmiş: \(dResaved), seri: \(dBurst), farklı: \(dDifferent)")
+        print("[photos] re-saved: \(dResaved), burst: \(dBurst), different: \(dDifferent)")
         XCTAssertLessThan(dResaved, SimilarPhotos.threshold)
         XCTAssertLessThan(dBurst, SimilarPhotos.threshold)
         XCTAssertGreaterThan(dDifferent, SimilarPhotos.threshold)

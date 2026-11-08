@@ -7,20 +7,20 @@ struct RulesView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            PageHeader(title: "Otomatik Temizlik",
-                       subtitle: "Zamanı gelen kurallar önce önizleme hazırlar ve bildirim gönderir; onaylayınca uygulanır. Hariç tutulanlara asla dokunulmaz.") {
+            PageHeader(title: L("Auto Cleanup"),
+                       subtitle: L("When a rule is due it prepares a preview and sends a notification first; it’s applied once you approve. Exclusions are never touched.")) {
                 Menu {
                     ForEach(CleanupRule.presets.filter { p in !state.rules.contains { $0.kind == p.kind } }, id: \.kind) { preset in
                         Button("\(preset.interval.title): \(preset.title)") { state.addRule(preset) }
                     }
-                } label: { Label("Kural Ekle", systemImage: "plus") }
+                } label: { Label(L("Add Rule"), systemImage: "plus") }
                     .fixedSize()
             }
             Divider()
             if state.rules.isEmpty {
-                EmptyStateView(icon: "calendar.badge.clock", title: "Henüz kural yok",
-                               message: "Örneğin \"her hafta uygulama önbelleklerini temizle\" gibi bir kural ekle. Kurallar varsayılan olarak önce sana sorar.",
-                               actionTitle: "Önerilen Kuralları Ekle") {
+                EmptyStateView(icon: "calendar.badge.clock", title: L("No rules yet"),
+                               message: L("Add a rule such as \"clean app caches every week\". By default, rules ask you first."),
+                               actionTitle: L("Add Suggested Rules")) {
                     CleanupRule.presets.prefix(3).forEach(state.addRule)
                 }
             } else {
@@ -46,7 +46,7 @@ struct RulesView: View {
                 HStack {
                     Text(rule.title).font(.headline)
                     if let pending = rule.pendingSize {
-                        Text("Onay bekliyor · \(pending.formattedBytes)")
+                        Text(L("Awaiting approval · \(pending.formattedBytes)"))
                             .font(.caption.bold()).foregroundStyle(.orange)
                             .padding(.horizontal, 6).padding(.vertical, 2)
                             .background(Color.orange.opacity(0.15), in: Capsule())
@@ -58,7 +58,7 @@ struct RulesView: View {
                     }
                     .labelsHidden()
                     .frame(width: 110)
-                    Toggle("Onay istemeden uygula", isOn: binding(rule, \.autoApply)).toggleStyle(.checkbox)
+                    Toggle(L("Apply without asking"), isOn: binding(rule, \.autoApply)).toggleStyle(.checkbox)
                 }
                 Text(statusText(rule)).font(.caption).foregroundStyle(.secondary)
             }
@@ -66,7 +66,7 @@ struct RulesView: View {
             VStack(alignment: .trailing, spacing: 8) {
                 Toggle("", isOn: binding(rule, \.enabled)).toggleStyle(.switch).labelsHidden()
                 HStack {
-                    Button("Önizle") { Task { await showPreview(rule) } }
+                    Button(L("Preview")) { Task { await showPreview(rule) } }
                         .disabled(loadingPreview != nil)
                     Button(role: .destructive) { state.deleteRule(rule.id) } label: { Image(systemName: "trash") }
                         .buttonStyle(.borderless)
@@ -77,9 +77,9 @@ struct RulesView: View {
     }
 
     private func statusText(_ rule: CleanupRule) -> String {
-        let last = rule.lastRun.map { "Son çalışma: \($0.formatted(.relative(presentation: .named)))" } ?? "Henüz çalışmadı"
-        guard rule.enabled else { return last + " · Kapalı" }
-        return last + " · Sonraki: \(rule.nextRun.formatted(date: .abbreviated, time: .omitted))"
+        let last = rule.lastRun.map { L("Last run: \($0.formatted(.relative(presentation: .named)))") } ?? L("Never run")
+        guard rule.enabled else { return last + L(" · Off") }
+        return last + L(" · Next: \(rule.nextRun.formatted(date: .abbreviated, time: .omitted))")
     }
 
     private func showPreview(_ rule: CleanupRule) async {
@@ -93,8 +93,8 @@ struct RulesView: View {
         let total = targets.reduce(Int64(0)) { $0 + $1.size }
         return VStack(alignment: .leading, spacing: 12) {
             Text(rule.title).font(.title2.bold())
-            Text(targets.isEmpty ? "Şu an temizlenecek bir şey yok." :
-                    "\(targets.count) öğe · \(total.formattedBytes) — \(RuleEngine.isPermanent(rule) ? "kalıcı olarak silinecek" : "Çöp Kutusu'na taşınacak")")
+            Text(targets.isEmpty ? L("Nothing to clean right now.") :
+                    L("\(targets.count) items · \(total.formattedBytes) — \(RuleEngine.isPermanent(rule) ? L("will be deleted permanently") : L("will be moved to the Trash"))"))
                 .foregroundStyle(.secondary)
             List(targets.sorted { $0.size > $1.size }, id: \.url) { t in
                 HStack {
@@ -107,8 +107,8 @@ struct RulesView: View {
             .frame(minHeight: 260)
             HStack {
                 Spacer()
-                Button("Vazgeç") { preview = nil }.keyboardShortcut(.cancelAction)
-                Button("Şimdi Uygula") {
+                Button(L("Cancel")) { preview = nil }.keyboardShortcut(.cancelAction)
+                Button(L("Apply Now")) {
                     preview = nil
                     Task { await state.runRule(rule.id, targets: targets) }
                 }

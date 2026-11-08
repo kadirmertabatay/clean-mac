@@ -1,6 +1,6 @@
 import Foundation
 
-/// Komut satırı araçlarını (diskutil, tmutil) çalıştırmak için küçük yardımcı.
+/// Small helper for running command-line tools (diskutil, tmutil).
 enum Shell {
     struct Output {
         let status: Int32
@@ -8,7 +8,7 @@ enum Shell {
         let stderr: String
     }
 
-    /// GUI uygulamalarının PATH'i kısıtlı olduğu için araçlar (brew, docker, xcrun) bu PATH ile çalıştırılır.
+    /// GUI apps have a restricted PATH, so tools (brew, docker, xcrun) are run with this PATH.
     static let toolPath = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
     static func run(_ path: String, _ args: [String], env: [String: String] = [:]) -> Output {
@@ -30,7 +30,7 @@ enum Shell {
                       stderr: String(decoding: e, as: UTF8.self))
     }
 
-    /// Komutu yönetici parolası isteyerek çalıştırır (macOS'un kendi parola penceresi).
+    /// Runs the command asking for the administrator password (macOS's own password dialog).
     static func runAsAdmin(_ command: String) -> Output {
         let escaped = command.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
         return run("/usr/bin/osascript", ["-e", "do shell script \"\(escaped)\" with administrator privileges"])
@@ -47,24 +47,24 @@ struct APFSVolume: Identifiable {
 
     var title: String {
         switch role {
-        case "System": "macOS Sistemi"
-        case "Data": "Veriler (senin dosyaların, uygulamalar)"
-        case "Preboot": "Preboot (başlatma dosyaları)"
-        case "Recovery": "Kurtarma"
-        case "VM": "Sanal Bellek (swap)"
-        case "Update": "Güncelleme"
+        case "System": L("macOS System")
+        case "Data": L("Data (your files, apps)")
+        case "Preboot": L("Preboot (startup files)")
+        case "Recovery": L("Recovery")
+        case "VM": L("Virtual Memory (swap)")
+        case "Update": L("Update")
         default: name
         }
     }
 
     var explanation: String {
         switch role {
-        case "System": "Salt okunur, mühürlü macOS. Silinemez; macOS sürümüne göre sabittir."
-        case "Data": "Kullanıcı dosyaları, uygulamalar, önbellekler. Temizlik burada yer açar."
-        case "Preboot": "Başlatma ve güvenlik dosyaları. macOS yönetir; büyükse genellikle bir sonraki güncellemede küçülür."
-        case "Recovery": "Kurtarma sistemi. Silinmemeli."
-        case "VM": "Bellek yetmediğinde kullanılan takas dosyaları. Yeniden başlatınca küçülür."
-        case "Update": "Bekleyen sistem güncellemesi dosyaları."
+        case "System": L("Read-only, sealed macOS. Can’t be deleted; fixed for each macOS version.")
+        case "Data": L("User files, apps, caches. Cleaning up frees space here.")
+        case "Preboot": L("Startup and security files managed by macOS; if large, it usually shrinks with the next update.")
+        case "Recovery": L("The recovery system. Shouldn’t be deleted.")
+        case "VM": L("Swap files used when memory runs short. They shrink after a restart.")
+        case "Update": L("Files of a pending system update.")
         default: ""
         }
     }
@@ -72,7 +72,7 @@ struct APFSVolume: Identifiable {
 
 struct LocalSnapshot: Identifiable, Hashable {
     let name: String
-    /// tmutil'in silme için beklediği tarih metni, ör. "2026-11-08-101010".
+    /// The date string tmutil expects for deletion, e.g. "2026-11-08-101010".
     let dateString: String
     let date: Date?
     var id: String { name }
@@ -81,7 +81,7 @@ struct LocalSnapshot: Identifiable, Hashable {
 struct StorageReport {
     let capacity: Int64
     let free: Int64
-    /// macOS'un gerektiğinde kendiliğinden silebileceği alan (önemli kullanım için kullanılabilir − gerçek boş).
+    /// Space macOS can free on its own when needed (available for important usage − actual free).
     let purgeable: Int64
     let volumes: [APFSVolume]
     let snapshots: [LocalSnapshot]
@@ -101,7 +101,7 @@ enum StorageInspector {
                              snapshots: snaps, otherSnapshotsNote: nil)
     }
 
-    /// `diskutil apfs list -plist` çıktısından başlangıç diskinin (System + Data rolleri olan) konteynerini seçer.
+    /// Picks the startup disk's container (the one with System + Data roles) from `diskutil apfs list -plist` output.
     static func parseContainer(plist: Data) -> (capacity: Int64, free: Int64, volumes: [APFSVolume])? {
         guard let root = try? PropertyListSerialization.propertyList(from: plist, format: nil) as? [String: Any],
               let containers = root["Containers"] as? [[String: Any]] else { return nil }
@@ -121,7 +121,7 @@ enum StorageInspector {
         return nil
     }
 
-    /// `tmutil listlocalsnapshots /` satırlarını ayrıştırır: "com.apple.TimeMachine.2026-11-08-101010.local".
+    /// Parses `tmutil listlocalsnapshots /` lines: "com.apple.TimeMachine.2026-11-08-101010.local".
     static func parseSnapshots(_ text: String) -> [LocalSnapshot] {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
@@ -136,13 +136,13 @@ enum StorageInspector {
         .sorted { ($0.date ?? .distantPast) > ($1.date ?? .distantPast) }
     }
 
-    /// Anlık görüntüyü siler; normal yetkiyle olmazsa yönetici parolası ister.
+    /// Deletes the snapshot; asks for the administrator password if normal privileges aren't enough.
     static func delete(_ snapshot: LocalSnapshot) -> String? {
         let normal = Shell.run("/usr/bin/tmutil", ["deletelocalsnapshots", snapshot.dateString])
         if normal.status == 0 { return nil }
         let admin = Shell.runAsAdmin("/usr/bin/tmutil deletelocalsnapshots \(snapshot.dateString)")
         if admin.status == 0 { return nil }
         let message = (admin.stderr.isEmpty ? normal.stderr : admin.stderr).trimmingCharacters(in: .whitespacesAndNewlines)
-        return message.isEmpty ? "Silinemedi." : message
+        return message.isEmpty ? L("Couldn’t be deleted.") : message
     }
 }

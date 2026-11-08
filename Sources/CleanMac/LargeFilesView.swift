@@ -36,24 +36,24 @@ struct LargeFilesView: View {
         let selectedSize = selected.reduce(Int64(0)) { $0 + $1.size }
 
         VStack(spacing: 0) {
-            PageHeader(title: "Büyük Dosyalar", subtitle: "Yer kaplayan dosyaları boyut, tür ve son kullanım tarihine göre incele") {
+            PageHeader(title: L("Large Files"), subtitle: L("Review the files taking up space by size, type and last use")) {
                 Button {
                     state.startScan()
-                } label: { Label(state.rootNode == nil ? "Tara" : "Yeniden Tara", systemImage: "arrow.clockwise") }
+                } label: { Label(state.rootNode == nil ? L("Scan") : L("Scan Again"), systemImage: "arrow.clockwise") }
                     .disabled(state.isScanning)
             }
             Divider()
             if state.isScanning {
                 ScanningView()
             } else if state.rootNode == nil {
-                EmptyStateView(icon: "doc.badge.arrow.up", title: "Önce bir tarama gerekli",
-                               message: "Büyük dosyaları listelemek için \(state.scanRoot.abbreviatedPath) klasörünü tarayalım.",
-                               actionTitle: "Taramayı Başlat") { state.startScan() }
+                EmptyStateView(icon: "doc.badge.arrow.up", title: L("A scan is needed first"),
+                               message: L("Let’s scan \(state.scanRoot.abbreviatedPath) to list large files."),
+                               actionTitle: L("Start Scan")) { state.startScan() }
             } else {
                 filterBar
                 Divider()
                 Table(items, selection: $selection, sortOrder: $sortOrder) {
-                    TableColumn("Ad", value: \.name) { f in
+                    TableColumn(L("Name"), value: \.name) { f in
                         HStack(spacing: 8) {
                             FileIconView(url: f.url, size: 18)
                             Text(f.name).lineLimit(1).truncationMode(.middle)
@@ -61,20 +61,20 @@ struct LargeFilesView: View {
                         .help(f.url.path)
                     }
                     .width(min: 200, ideal: 300)
-                    TableColumn("Boyut", value: \.size) { f in
+                    TableColumn(L("Size"), value: \.size) { f in
                         Text(f.size.formattedBytes).monospacedDigit()
                     }
                     .width(min: 70, ideal: 90, max: 120)
-                    TableColumn("Tür", value: \.kindTitle) { f in
+                    TableColumn(L("Kind"), value: \.kindTitle) { f in
                         Label(f.kind.title, systemImage: f.kind.icon).foregroundStyle(.secondary)
                     }
                     .width(min: 80, ideal: 130, max: 180)
-                    TableColumn("Son Kullanım", value: \.lastUsedSort) { f in
+                    TableColumn(L("Last Used"), value: \.lastUsedSort) { f in
                         Text(f.lastUsed.map { $0.formatted(.relative(presentation: .named)) } ?? "—")
                             .foregroundStyle(.secondary)
                     }
                     .width(min: 90, ideal: 120, max: 160)
-                    TableColumn("Konum", value: \.parentPath) { f in
+                    TableColumn(L("Location"), value: \.parentPath) { f in
                         Text(f.parentPath).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                     }
                 }
@@ -82,22 +82,22 @@ struct LargeFilesView: View {
                     let urls = items.filter { ids.contains($0.id) }.map(\.url)
                     if !urls.isEmpty {
                         if urls.count == 1, let u = urls.first {
-                            Button("Hızlı Bakış") { previewURL = u }
-                            Button("Aç") { Finder.open(u) }
+                            Button(L("Quick Look")) { previewURL = u }
+                            Button(L("Open")) { Finder.open(u) }
                         }
-                        Button("Finder'da Göster") { Finder.reveal(urls) }
-                        Button("Yolu Kopyala") { Finder.copyPaths(urls) }
-                        Button("Harici Diske Arşivle…") {
+                        Button(L("Show in Finder")) { Finder.reveal(urls) }
+                        Button(L("Copy Path")) { Finder.copyPaths(urls) }
+                        Button(L("Archive to External Disk…")) {
                             let entries = items.filter { ids.contains($0.id) }
                             if let dest = state.chooseArchiveDestination() { Task { await state.archive(entries, to: dest) } }
                         }
                         Divider()
-                        Button("Hariç Tut (önerme, silme)") { urls.forEach(state.addExclusion) }
+                        Button(L("Exclude (don’t suggest or delete)")) { urls.forEach(state.addExclusion) }
                         if urls.count == 1, let u = urls.first {
-                            Button("Klasörünü Hariç Tut") { state.addExclusion(u.deletingLastPathComponent()) }
+                            Button(L("Exclude Its Folder")) { state.addExclusion(u.deletingLastPathComponent()) }
                         }
                         Divider()
-                        Button("Çöp Kutusu'na Taşı…", role: .destructive) {
+                        Button(L("Move to Trash…"), role: .destructive) {
                             selection = Set(urls.map(\.path))
                             confirm = true
                         }
@@ -114,25 +114,25 @@ struct LargeFilesView: View {
                 .quickLookPreview($previewURL)
                 Divider()
                 HStack(spacing: 12) {
-                    Text("\(items.count.formatted()) dosya · \(items.reduce(Int64(0)) { $0 + $1.size }.formattedBytes)")
+                    Text(L("\(items.count.formatted()) files · \(items.reduce(Int64(0)) { $0 + $1.size }.formattedBytes)"))
                         .foregroundStyle(.secondary)
                     Spacer()
                     if let p = state.archiveProgress {
                         ProgressView(value: Double(p.done), total: Double(max(p.total, 1))).frame(width: 120)
-                        Text("Arşivleniyor: \(p.current)").font(.caption).lineLimit(1).truncationMode(.middle).frame(maxWidth: 200)
+                        Text(L("Archiving: \(p.current)")).font(.caption).lineLimit(1).truncationMode(.middle).frame(maxWidth: 200)
                     } else if !selected.isEmpty {
-                        Text("Seçili: \(selected.count) · \(selectedSize.formattedBytes)").bold()
-                        Button("Finder'da Göster") { Finder.reveal(selected.map(\.url)) }
-                        Button("Harici Diske Arşivle…") {
+                        Text(L("Selected: \(selected.count) · \(selectedSize.formattedBytes)")).bold()
+                        Button(L("Show in Finder")) { Finder.reveal(selected.map(\.url)) }
+                        Button(L("Archive to External Disk…")) {
                             if let dest = state.chooseArchiveDestination() {
                                 let entries = selected
                                 selection = []
                                 Task { await state.archive(entries, to: dest) }
                             }
                         }
-                        .help("Kopyalar, SHA-256 ile doğrular, sonra orijinali Çöp Kutusu'na taşır.")
+                        .help(L("Copies, verifies with SHA-256, then moves the original to the Trash."))
                     }
-                    Button("Çöp Kutusu'na Taşı", role: .destructive) { confirm = true }
+                    Button(L("Move to Trash"), role: .destructive) { confirm = true }
                         .buttonStyle(.borderedProminent)
                         .tint(.red)
                         .disabled(selected.isEmpty || state.isRemoving)
@@ -141,37 +141,37 @@ struct LargeFilesView: View {
                 .padding(.vertical, 10)
             }
         }
-        .confirmationDialog("\(selected.count) dosya Çöp Kutusu'na taşınsın mı?", isPresented: $confirm) {
-            Button("Çöp Kutusu'na Taşı (\(selectedSize.formattedBytes))", role: .destructive) {
+        .confirmationDialog(L("Move \(selected.count) files to the Trash?"), isPresented: $confirm) {
+            Button(L("Move to Trash (\(selectedSize.formattedBytes))"), role: .destructive) {
                 let targets = selected.map { RemovalTarget(url: $0.url, size: $0.size, expectedModified: $0.modified) }
                 selection = []
                 Task { await state.remove(targets, permanently: false) }
             }
-            Button("Vazgeç", role: .cancel) {}
+            Button(L("Cancel"), role: .cancel) {}
         } message: {
-            Text("Dosyalar Çöp Kutusu'ndan geri alınabilir. Alan, çöp boşaltıldığında açılır.")
+            Text(L("Files can be restored from the Trash. The space is freed when the Trash is emptied."))
         }
     }
 
     private var filterBar: some View {
         HStack(spacing: 14) {
-            Picker("En az", selection: $minSize) {
+            Picker(L("At least"), selection: $minSize) {
                 ForEach(Self.sizeOptions, id: \.1) { Text($0.0).tag($0.1) }
             }
             .frame(width: 140)
-            Picker("Tür", selection: $kind) {
-                Text("Tümü").tag(FileKind?.none)
+            Picker(L("Kind"), selection: $kind) {
+                Text(L("All")).tag(FileKind?.none)
                 Divider()
                 ForEach(FileKind.allCases) { Label($0.title, systemImage: $0.icon).tag(FileKind?.some($0)) }
             }
             .frame(width: 200)
-            Toggle("6+ ay kullanılmayan", isOn: $state.largeFilesStaleOnly)
+            Toggle(L("Unused for 6+ months"), isOn: $state.largeFilesStaleOnly)
                 .fixedSize()
-            Toggle("Sistem dosyaları", isOn: $showProtected)
+            Toggle(L("System files"), isOn: $showProtected)
                 .fixedSize()
-                .help("~/Library ve uygulama paketlerinin içindeki dosyalar. Bunları silmek uygulamaları bozabilir.")
+                .help(L("Files inside ~/Library and app bundles. Deleting them can break apps."))
             Spacer()
-            TextField("Ara", text: $search)
+            TextField(L("Search"), text: $search)
                 .textFieldStyle(.roundedBorder)
                 .frame(minWidth: 120, maxWidth: 200)
         }

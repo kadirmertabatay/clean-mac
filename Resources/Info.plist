@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>tr</string>
+	<string>en</string>
 	<key>CFBundleDisplayName</key>
 	<string>CleanMac</string>
 	<key>CFBundleExecutable</key>
@@ -14,6 +14,11 @@
 	<string>com.kadirmertabatay.cleanmac</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>tr</string>
+	</array>
 	<key>CFBundleName</key>
 	<string>CleanMac</string>
 	<key>CFBundlePackageType</key>
@@ -27,18 +32,18 @@
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
 	<key>NSDesktopFolderUsageDescription</key>
-	<string>Masaüstündeki dosyaların kapladığı alanı hesaplamak için.</string>
+	<string>To calculate how much space the files on your Desktop take up.</string>
 	<key>NSDocumentsFolderUsageDescription</key>
-	<string>Belgeler klasörünün kapladığı alanı hesaplamak için.</string>
+	<string>To calculate how much space your Documents folder takes up.</string>
 	<key>NSDownloadsFolderUsageDescription</key>
-	<string>İndirilenler klasöründeki eski ve büyük dosyaları bulmak için.</string>
+	<string>To find old and large files in your Downloads folder.</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
-	<string>© 2026 Kadir Mert Abatay · MIT Lisansı</string>
+	<string>© 2026 Kadir Mert Abatay · MIT License</string>
 	<key>NSNetworkVolumesUsageDescription</key>
-	<string>Seçtiğin ağ birimlerini analiz etmek için.</string>
+	<string>To analyze network volumes you choose.</string>
 	<key>NSRemovableVolumesUsageDescription</key>
-	<string>Seçtiğin harici diskleri analiz etmek için.</string>
+	<string>To analyze external disks you choose.</string>
 </dict>
 </plist>

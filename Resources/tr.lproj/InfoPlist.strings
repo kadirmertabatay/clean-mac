@@ -1,0 +1,7 @@
+/* Turkish permission prompts and copyright shown by macOS. */
+"NSDesktopFolderUsageDescription" = "Masaüstündeki dosyaların kapladığı alanı hesaplamak için.";
+"NSDocumentsFolderUsageDescription" = "Belgeler klasörünün kapladığı alanı hesaplamak için.";
+"NSDownloadsFolderUsageDescription" = "İndirilenler klasöründeki eski ve büyük dosyaları bulmak için.";
+"NSRemovableVolumesUsageDescription" = "Seçtiğin harici diskleri analiz etmek için.";
+"NSNetworkVolumesUsageDescription" = "Seçtiğin ağ birimlerini analiz etmek için.";
+"NSHumanReadableCopyright" = "© 2026 Kadir Mert Abatay · MIT Lisansı";

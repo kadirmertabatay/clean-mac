@@ -21,12 +21,12 @@ struct SimilarPhotosView: View {
         let selectedSize = selectedFiles.reduce(Int64(0)) { $0 + $1.size }
 
         VStack(spacing: 0) {
-            PageHeader(title: "Benzer Fotoğraflar",
-                       subtitle: "Seri çekimler ve yeniden kaydedilmiş kopyalar. Görüntü analizi tamamen bu Mac'te yapılır.") {
+            PageHeader(title: L("Similar Photos"),
+                       subtitle: L("Burst shots and re-saved copies. Image analysis runs entirely on this Mac.")) {
                 Button {
                     selected = []
                     Task { await state.findSimilarPhotos() }
-                } label: { Label(state.similarPhotosReady ? "Yeniden Ara" : "Benzerleri Bul", systemImage: "photo.stack") }
+                } label: { Label(state.similarPhotosReady ? L("Search Again") : L("Find Similar"), systemImage: "photo.stack") }
                     .disabled(state.isScanning || state.isFindingSimilar)
             }
             Divider()
@@ -35,17 +35,17 @@ struct SimilarPhotosView: View {
             } else if state.isFindingSimilar {
                 VStack(spacing: 14) {
                     ProgressView(value: state.similarProgress).frame(width: 320)
-                    Text("Fotoğraflar analiz ediliyor… \(state.similarProgress.formatted(.percent.precision(.fractionLength(0))))")
-                    Button("Durdur") { state.cancelScan() }
+                    Text(L("Analyzing photos… \(state.similarProgress.formatted(.percent.precision(.fractionLength(0))))"))
+                    Button(L("Stop")) { state.cancelScan() }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if !state.similarPhotosReady {
-                EmptyStateView(icon: "photo.stack", title: "Benzer fotoğrafları bul",
-                               message: "Taranan klasördeki fotoğraflar (Fotoğraflar arşivi hariç) görsel benzerliğe göre gruplanır. Hiçbir dosya değiştirilmez.",
-                               actionTitle: "Benzerleri Bul") { Task { await state.findSimilarPhotos() } }
+                EmptyStateView(icon: "photo.stack", title: L("Find similar photos"),
+                               message: L("Photos in the scanned folder (excluding the Photos library) are grouped by visual similarity. No files are changed."),
+                               actionTitle: L("Find Similar")) { Task { await state.findSimilarPhotos() } }
             } else if groups.isEmpty {
-                EmptyStateView(icon: "checkmark.circle", title: "Benzer fotoğraf yok",
-                               message: "Birbirine çok benzeyen fotoğraf grubu bulunamadı.")
+                EmptyStateView(icon: "checkmark.circle", title: L("No similar photos"),
+                               message: L("No groups of very similar photos were found."))
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 18) {
@@ -55,15 +55,15 @@ struct SimilarPhotosView: View {
                 }
                 Divider()
                 HStack(spacing: 12) {
-                    Text("\(groups.count) grup").foregroundStyle(.secondary)
+                    Text(L("\(groups.count) groups")).foregroundStyle(.secondary)
                     Spacer()
-                    Button("Akıllı Seç") {
-                        // Her gruptaki en büyük (genellikle en yüksek kaliteli) dosyayı koru.
+                    Button(L("Smart Select")) {
+                        // Keep the largest (usually highest-quality) file in each group.
                         selected = Set(groups.flatMap { $0.dropFirst().map(\.id) })
                     }
-                    .help("Her grupta en büyük dosyayı korur, diğerlerini seçer.")
-                    Button("Seçimi Temizle") { selected = [] }.disabled(selected.isEmpty)
-                    Button("Çöp Kutusu'na Taşı (\(selectedFiles.count) · \(selectedSize.formattedBytes))", role: .destructive) { confirm = true }
+                    .help(L("Keeps the largest file in each group and selects the others."))
+                    Button(L("Clear Selection")) { selected = [] }.disabled(selected.isEmpty)
+                    Button(L("Move to Trash (\(selectedFiles.count) · \(selectedSize.formattedBytes))"), role: .destructive) { confirm = true }
                         .buttonStyle(.borderedProminent)
                         .tint(.red)
                         .disabled(selectedFiles.isEmpty || state.isRemoving
@@ -74,8 +74,8 @@ struct SimilarPhotosView: View {
             }
         }
         .quickLookPreview($previewURL)
-        .confirmationDialog("\(selectedFiles.count) fotoğraf Çöp Kutusu'na taşınsın mı?", isPresented: $confirm) {
-            Button("Çöp Kutusu'na Taşı (\(selectedSize.formattedBytes))", role: .destructive) {
+        .confirmationDialog(L("Move \(selectedFiles.count) photos to the Trash?"), isPresented: $confirm) {
+            Button(L("Move to Trash (\(selectedSize.formattedBytes))"), role: .destructive) {
                 let targets = groups.flatMap { g -> [RemovalTarget] in
                     let keep = g.filter { !selected.contains($0.id) }.map(\.url)
                     return g.filter { selected.contains($0.id) }.map {
@@ -86,13 +86,13 @@ struct SimilarPhotosView: View {
                 Task { await state.remove(targets, permanently: false) }
             }
         } message: {
-            Text("Her gruptan en az bir fotoğraf korunur. Benzer ama aynı olmayan fotoğraflar olduğu için seçimini gözden geçir; Geçmiş'ten geri alınabilir.")
+            Text(L("At least one photo from each group is kept. Since the photos are similar but not identical, review your selection; they can be restored from History."))
         }
     }
 
     private func groupRow(_ group: [FileEntry]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("\(group.count) benzer fotoğraf · \(group.first!.url.deletingLastPathComponent().abbreviatedPath)")
+            Text(L("\(group.count) similar photos · \(group.first!.url.deletingLastPathComponent().abbreviatedPath)"))
                 .font(.headline).lineLimit(1).truncationMode(.middle)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
@@ -110,7 +110,7 @@ struct SimilarPhotosView: View {
                                 Checkbox(state: selected.contains(photo.id) ? .on : .off) { toggle(photo.id) }
                                     .padding(6)
                                 if i == 0 {
-                                    Text("en büyük").font(.caption2.bold()).foregroundStyle(.white)
+                                    Text(L("largest")).font(.caption2.bold()).foregroundStyle(.white)
                                         .padding(.horizontal, 5).padding(.vertical, 2)
                                         .background(Color.green, in: Capsule())
                                         .padding(6)
@@ -121,9 +121,9 @@ struct SimilarPhotosView: View {
                             Text(photo.size.formattedBytes).font(.caption2).foregroundStyle(.secondary)
                         }
                         .contextMenu {
-                            Button("Hızlı Bakış") { previewURL = photo.url }
-                            Button("Finder'da Göster") { Finder.reveal([photo.url]) }
-                            Button("Hariç Tut") { state.addExclusion(photo.url) }
+                            Button(L("Quick Look")) { previewURL = photo.url }
+                            Button(L("Show in Finder")) { Finder.reveal([photo.url]) }
+                            Button(L("Exclude")) { state.addExclusion(photo.url) }
                         }
                     }
                 }

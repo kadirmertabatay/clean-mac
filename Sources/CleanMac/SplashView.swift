@@ -1,9 +1,9 @@
 import AppKit
 import SwiftUI
 
-/// Uygulama açılırken bir kez gösterilen karşılama ekranı.
-/// Simge yaylanarak gelir, etrafında tarama halkası döner, parıltılar belirir;
-/// disk bilgisi hazır olunca alt satırda gösterilir. Tıklayınca hemen kapanır.
+/// The welcome screen shown once while the app launches.
+/// The icon springs in, a scan ring spins around it and sparkles appear;
+/// disk info is shown on the bottom line once ready. Clicking dismisses it immediately.
 struct SplashView: View {
     let disk: DiskInfo?
     let icon: NSImage
@@ -17,14 +17,14 @@ struct SplashView: View {
     @State private var sparkle = false
     @State private var statusIndex = 0
 
-    private let statuses = ["Hazırlanıyor…", "Disk okunuyor…", "Asistan hazır"]
+    private let statuses = [L("Getting ready…"), L("Reading disk…"), L("Assistant ready")]
     static let duration: Double = 2.2
 
     init(disk: DiskInfo?, icon: NSImage? = nil, settled: Bool = false, onFinish: @escaping () -> Void) {
         self.disk = disk
         self.icon = icon ?? NSApp?.applicationIconImage ?? NSImage(named: NSImage.applicationIconName) ?? NSImage()
         self.onFinish = onFinish
-        // settled: animasyonların bitmiş hali (testte görüntü üretmek için)
+        // settled: the finished state of the animations (for rendering images in tests)
         if settled {
             _iconIn = State(initialValue: true); _ringTrim = State(initialValue: 1)
             _textIn = State(initialValue: true); _sparkle = State(initialValue: true)
@@ -37,7 +37,7 @@ struct SplashView: View {
 
             VStack(spacing: 22) {
                 ZStack {
-                    // Tarama halkası
+                    // Scan ring
                     Circle()
                         .stroke(Color.accentColor.opacity(0.12), lineWidth: 5)
                         .frame(width: 196, height: 196)
@@ -50,7 +50,7 @@ struct SplashView: View {
                         .frame(width: 196, height: 196)
                         .rotationEffect(.degrees(-90 + ringRotation))
 
-                    // Simge
+                    // Icon
                     Image(nsImage: icon)
                         .resizable()
                         .interpolation(.high)
@@ -59,7 +59,7 @@ struct SplashView: View {
                         .scaleEffect(iconIn ? 1 : 0.6)
                         .opacity(iconIn ? 1 : 0)
 
-                    // Parıltılar
+                    // Sparkles
                     ForEach(Self.sparkles.indices, id: \.self) { i in
                         let s = Self.sparkles[i]
                         Image(systemName: "sparkle")
@@ -83,7 +83,7 @@ struct SplashView: View {
                         .foregroundStyle(
                             LinearGradient(colors: [.primary, .primary.opacity(0.7)], startPoint: .top, endPoint: .bottom)
                         )
-                    Text("Mac'in için yerel depolama asistanı")
+                    Text(L("A local storage assistant for your Mac"))
                         .font(.title3)
                         .foregroundStyle(.secondary)
                 }
@@ -100,7 +100,7 @@ struct SplashView: View {
                     if let disk {
                         HStack(spacing: 8) {
                             Image(systemName: "internaldrive")
-                            Text("\(disk.available.formattedBytes) boş · \(disk.total.formattedBytes)")
+                            Text(L("\(disk.available.formattedBytes) free · \(disk.total.formattedBytes)"))
                                 .monospacedDigit()
                         }
                         .font(.caption)
@@ -116,7 +116,7 @@ struct SplashView: View {
                 Spacer()
                 HStack(spacing: 6) {
                     Image(systemName: "lock.shield")
-                    Text("Tamamen yerel · Hiçbir veri Mac'inden çıkmaz")
+                    Text(L("Fully local · No data ever leaves your Mac"))
                 }
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
@@ -128,7 +128,7 @@ struct SplashView: View {
         .onTapGesture { onFinish() }
         .task { await run() }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("CleanMac açılıyor")
+        .accessibilityLabel(L("CleanMac is opening"))
     }
 
     private var background: some View {

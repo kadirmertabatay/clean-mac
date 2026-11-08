@@ -2,9 +2,9 @@ import Foundation
 
 struct CleanupRule: Codable, Identifiable, Hashable {
     enum Kind: Codable, Hashable {
-        /// Güvenli bir gereksiz dosya kategorisinin tamamı (ör. "caches", "logs").
+        /// An entire safe junk category (e.g. "caches", "logs").
         case junk(String)
-        /// İndirilenler'de belirtilen günden eski .dmg / .pkg / .xip / .iso dosyaları.
+        /// .dmg / .pkg / .xip / .iso files in Downloads older than the given number of days.
         case installers(days: Int)
     }
 
@@ -20,9 +20,9 @@ struct CleanupRule: Codable, Identifiable, Hashable {
         }
         var title: String {
             switch self {
-            case .daily: "Her gün"
-            case .weekly: "Her hafta"
-            case .monthly: "Her ay"
+            case .daily: L("Daily")
+            case .weekly: L("Weekly")
+            case .monthly: L("Monthly")
             }
         }
     }
@@ -31,17 +31,17 @@ struct CleanupRule: Codable, Identifiable, Hashable {
     var kind: Kind
     var interval: Interval
     var enabled = true
-    /// Kapalıyken kural zamanı gelince yalnızca önizleme hazırlanır ve bildirim gönderilir.
+    /// When off, a due rule only prepares a preview and sends a notification.
     var autoApply = false
     var createdAt = Date()
     var lastRun: Date?
-    /// Zamanı gelmiş, onay bekleyen temizliğin tahmini boyutu.
+    /// Estimated size of a due cleanup awaiting approval.
     var pendingSize: Int64?
 
     var title: String {
         switch kind {
         case .junk(let id): JunkScanner.definitions.first { $0.id == id }?.title ?? id
-        case .installers(let days): "İndirilenler'deki \(days)+ günlük kurulum dosyaları"
+        case .installers(let days): L("Installers in Downloads older than \(days) days")
         }
     }
 
@@ -86,7 +86,7 @@ enum RuleEngine {
         }
     }
 
-    /// Kalıcı silinebilecek mi: yalnızca önbellek türü kategoriler ve kullanıcı bunu ayarlardan açtıysa.
+    /// Whether items can be deleted permanently: only cache-type categories, and only if the user enabled it in Settings.
     static func isPermanent(_ rule: CleanupRule) -> Bool {
         if case .junk = rule.kind { return UserDefaults.standard.bool(forKey: "permanentDelete") }
         return false

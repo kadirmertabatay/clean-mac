@@ -17,9 +17,9 @@ struct SmartCleanView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 header
-                step(1, "Nelere dokunulmasın?", "Seçtiklerine ait hiçbir dosya silinmez — önbellekleri ve verileri dahil.") { protectionsCard }
-                step(2, "Ne kadar kapsamlı olsun?", level.detail) { levelPicker }
-                step(3, "Plan", plan == nil ? "Planı hazırla; hiçbir şey sen onaylamadan silinmez." : "Gözden geçir, istemediklerini çıkar, sonra uygula.") { planCard }
+                step(1, L("What should never be touched?"), L("No file belonging to your choices is deleted, including their caches and data.")) { protectionsCard }
+                step(2, L("How thorough?"), level.detail) { levelPicker }
+                step(3, "Plan", plan == nil ? L("Prepare the plan; nothing is deleted without your approval.") : L("Review it, remove what you don’t want, then apply.")) { planCard }
             }
             .padding(24)
             .frame(maxWidth: 920)
@@ -29,8 +29,8 @@ struct SmartCleanView: View {
             if state.apps.isEmpty { await state.loadApps() }
             if ScreenshotMode.isActive && plan == nil { await build() }
         }
-        .confirmationDialog("Akıllı Silme planı uygulansın mı?", isPresented: $confirm) {
-            Button("Uygula (\(selectedSize.formattedBytes))", role: .destructive) {
+        .confirmationDialog(L("Apply the Smart Cleanup plan?"), isPresented: $confirm) {
+            Button(L("Apply (\(selectedSize.formattedBytes))"), role: .destructive) {
                 guard let plan else { return }
                 let sel = selected
                 Task {
@@ -40,7 +40,7 @@ struct SmartCleanView: View {
                 }
             }
         } message: {
-            Text("\(selected.count) öğe Çöp Kutusu'na taşınacak\(UserDefaults.standard.bool(forKey: "permanentDelete") ? " (önbellekler kalıcı silinir)" : ""). Geçmiş ekranından geri alınabilir. Korunan alanlara dokunulmaz.")
+            Text(L("\(selected.count) items will be moved to the Trash\(UserDefaults.standard.bool(forKey: "permanentDelete") ? L(" (caches are deleted permanently)") : ""). They can be restored from History. Protected areas aren’t touched."))
         }
     }
 
@@ -52,8 +52,8 @@ struct SmartCleanView: View {
                 .background(LinearGradient(colors: [.indigo, .blue], startPoint: .topLeading, endPoint: .bottomTrailing),
                             in: RoundedRectangle(cornerRadius: 14))
             VStack(alignment: .leading, spacing: 6) {
-                Text("Akıllı Silme").font(.title.bold())
-                Text("Önce neyin korunacağını söyle, ben de geri kalanından güvenle silinebilecekleri tek bir plan halinde çıkarayım. Korumaların Otomatik Temizlik kurallarında ve asistanın hızlı temizleme düğmelerinde de geçerlidir.")
+                Text(L("Smart Cleanup")).font(.title.bold())
+                Text(L("Tell me what to protect, and I’ll turn everything else that can be safely deleted into a single plan. Your protections also apply to Auto Cleanup rules and the assistant’s quick clean buttons."))
                     .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -73,7 +73,7 @@ struct SmartCleanView: View {
         }
     }
 
-    // MARK: 1. Korumalar
+    // MARK: 1. Protections
 
     private var protectionsCard: some View {
         let catalog = state.protectionCatalog
@@ -84,12 +84,12 @@ struct SmartCleanView: View {
                     if !items.isEmpty { protectionGroup(group, items) }
                 }
                 if state.isLoadingApps {
-                    HStack { ProgressView().controlSize(.small); Text("Uygulamalar okunuyor…").foregroundStyle(.secondary) }
+                    HStack { ProgressView().controlSize(.small); Text(L("Reading apps…")).foregroundStyle(.secondary) }
                 }
                 let active = state.activeProtections
                 if !active.isEmpty {
                     Divider()
-                    Label("Korunuyor: " + active.map(\.title).joined(separator: ", "), systemImage: "lock.fill")
+                    Label(L("Protected: ") + active.map(\.title).joined(separator: ", "), systemImage: "lock.fill")
                         .font(.caption).foregroundStyle(.secondary).lineLimit(3)
                 }
             }
@@ -103,17 +103,17 @@ struct SmartCleanView: View {
         let visible = group == .apps && !showAllApps && appSearch.isEmpty ? Array(filtered.prefix(12)) : filtered
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(group.rawValue).font(.headline)
+                Text(group.title).font(.headline)
                 Spacer()
                 if group == .apps {
-                    TextField("Uygulama ara", text: $appSearch).textFieldStyle(.roundedBorder).frame(width: 180)
+                    TextField(L("Search apps"), text: $appSearch).textFieldStyle(.roundedBorder).frame(width: 180)
                 }
             }
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 200), spacing: 8)], alignment: .leading, spacing: 8) {
                 ForEach(visible) { p in chip(p) }
             }
             if group == .apps && appSearch.isEmpty && filtered.count > 12 {
-                Button(showAllApps ? "Daha az göster" : "Tüm uygulamaları göster (\(filtered.count))") { showAllApps.toggle() }
+                Button(showAllApps ? L("Show less") : L("Show all apps (\(filtered.count))")) { showAllApps.toggle() }
                     .buttonStyle(.link)
             }
         }
@@ -139,10 +139,10 @@ struct SmartCleanView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(on ? "Korunuyor — silinmeyecek" : "Korunmuyor — tıkla ve koru")
+        .help(on ? L("Protected — won’t be deleted") : L("Not protected — click to protect"))
     }
 
-    // MARK: 2. Kapsam
+    // MARK: 2. Scope
 
     private var levelPicker: some View {
         Picker("", selection: Binding(get: { level }, set: { levelRaw = $0.rawValue; plan = nil })) {
@@ -164,19 +164,19 @@ struct SmartCleanView: View {
             Card {
                 VStack(alignment: .leading, spacing: 12) {
                     if plan.groups.isEmpty {
-                        Label("Bu kapsamda ve korumalarla silinecek bir şey bulunamadı.", systemImage: "checkmark.circle")
+                        Label(L("Nothing to delete with this scope and these protections."), systemImage: "checkmark.circle")
                             .foregroundStyle(.green)
                     }
                     ForEach(plan.groups) { g in groupRow(g) }
                     if !plan.protected.isEmpty {
                         Divider()
                         VStack(alignment: .leading, spacing: 4) {
-                            Label("Korunduğu için atlananlar", systemImage: "lock.shield").font(.headline)
+                            Label(L("Skipped because protected"), systemImage: "lock.shield").font(.headline)
                             ForEach(plan.protected, id: \.title) { p in
                                 HStack {
                                     Text(p.title)
                                     Spacer()
-                                    Text("\(p.count) öğe · \(p.size.formattedBytes)").foregroundStyle(.secondary).monospacedDigit()
+                                    Text(L("\(p.count) items · \(p.size.formattedBytes)")).foregroundStyle(.secondary).monospacedDigit()
                                 }
                                 .font(.callout)
                             }
@@ -184,10 +184,10 @@ struct SmartCleanView: View {
                     }
                     Divider()
                     HStack {
-                        Button("Yeniden Hazırla") { Task { await build() } }.disabled(building)
+                        Button(L("Prepare Again")) { Task { await build() } }.disabled(building)
                         Spacer()
-                        Text("Seçili: \(selected.count) öğe · \(selectedSize.formattedBytes)").bold()
-                        Button("Planı Uygula") { confirm = true }
+                        Text(L("Selected: \(selected.count) items · \(selectedSize.formattedBytes)")).bold()
+                        Button(L("Apply Plan")) { confirm = true }
                             .buttonStyle(.borderedProminent)
                             .disabled(selected.isEmpty || state.isRemoving)
                     }
@@ -198,14 +198,14 @@ struct SmartCleanView: View {
                 Button {
                     Task { await build() }
                 } label: {
-                    Label("Planı Hazırla", systemImage: "list.bullet.clipboard")
+                    Label(L("Prepare Plan"), systemImage: "list.bullet.clipboard")
                 }
                 .buttonStyle(.borderedProminent).controlSize(.large)
                 .disabled(building || state.isScanning)
                 if building {
                     ProgressView().controlSize(.small)
                     Text(state.smartStep).foregroundStyle(.secondary)
-                    Button("Durdur") { state.cancelScan() }
+                    Button(L("Stop")) { state.cancelScan() }
                 }
             }
         }
@@ -234,15 +234,15 @@ struct SmartCleanView: View {
                     Text(item.size.formattedBytes).font(.caption).monospacedDigit()
                 }
                 .contextMenu {
-                    Button("Finder'da Göster") { Finder.reveal([item.url]) }
-                    Button("Hariç Tut") {
+                    Button(L("Show in Finder")) { Finder.reveal([item.url]) }
+                    Button(L("Exclude")) {
                         state.addExclusion(item.url)
                         selected.remove(item.id)
                     }
                 }
             }
             if g.items.count > 200 {
-                Text("… ve \(g.items.count - 200) öğe daha").font(.caption).foregroundStyle(.secondary)
+                Text(L("… and \(g.items.count - 200) more items")).font(.caption).foregroundStyle(.secondary)
             }
         } label: {
             HStack(spacing: 10) {
@@ -257,7 +257,7 @@ struct SmartCleanView: View {
                 Spacer()
                 VStack(alignment: .trailing, spacing: 2) {
                     Text(g.size.formattedBytes).font(.headline).monospacedDigit()
-                    Text("\(g.items.count) öğe").font(.caption).foregroundStyle(.secondary)
+                    Text(L("\(g.items.count) items")).font(.caption).foregroundStyle(.secondary)
                 }
             }
         }

@@ -1,15 +1,15 @@
 import Foundation
 import Vision
 
-/// Görsel olarak çok benzeyen fotoğrafları (seri çekimler, düzenlenmiş/yeniden kaydedilmiş kopyalar) gruplar.
-/// Apple Vision'ın görüntü parmak izi tamamen bu Mac'te hesaplanır.
+/// Groups visually very similar photos (burst shots, edited/re-saved copies).
+/// Apple Vision's image feature print is computed entirely on this Mac.
 enum SimilarPhotos {
     static let extensions: Set<String> = ["jpg", "jpeg", "png", "heic", "heif", "tif", "tiff", "webp", "dng", "cr2", "cr3", "nef", "arw"]
-    /// Bu mesafenin altındaki çiftler "benzer" sayılır. Ölçümler (revizyon 2): küçültme/yeniden kaydetme ≈ 0,10–0,12,
-    /// seri çekim ≈ 0,06–0,08, benzer kompozisyonlu farklı sahne ≈ 0,41. Yanlış eşleşme silmeye yol açabileceği için temkinli.
+    /// Pairs below this distance count as "similar". Measurements (revision 2): resize/re-save ≈ 0.10–0.12,
+    /// burst shot ≈ 0.06–0.08, different scene with similar composition ≈ 0.41. Conservative, since a false match can lead to deletion.
     static let threshold: Float = 0.30
     static let maxImages = 4000
-    /// Zaman sırasında her görsel kendinden sonraki bu kadar görselle karşılaştırılır.
+    /// In time order, each image is compared with this many images that follow it.
     static let timeWindow = 25
 
     static func featurePrint(_ url: URL) -> VNFeaturePrintObservation? {
@@ -30,7 +30,7 @@ enum SimilarPhotos {
         return d
     }
 
-    /// Adaylar: aynı klasördeki görseller ve çekim zamanına göre yakın görseller. Tüm çiftleri karşılaştırmaktan çok daha hızlı.
+    /// Candidates: images in the same folder and images close in capture time. Much faster than comparing every pair.
     static func candidatePairs(_ photos: [FileEntry]) -> Set<[Int]> {
         var pairs = Set<[Int]>()
         let byTime = photos.indices.sorted { photos[$0].modifiedSort < photos[$1].modifiedSort }
@@ -49,7 +49,7 @@ enum SimilarPhotos {
             .sorted { $0.size > $1.size }.prefix(maxImages))
         guard photos.count > 1 else { return [] }
 
-        // 1. Parmak izleri (işin büyük kısmı) — paralel.
+        // 1. Feature prints (most of the work), in parallel.
         var prints = [VNFeaturePrintObservation?](repeating: nil, count: photos.count)
         let lock = NSLock()
         var done = 0
@@ -65,7 +65,7 @@ enum SimilarPhotos {
         }
         if Task.isCancelled { return [] }
 
-        // 2. Aday çiftleri karşılaştır, benzerleri birleştir (union-find).
+        // 2. Compare candidate pairs and merge similar ones (union-find).
         var parent = Array(photos.indices)
         func root(_ x: Int) -> Int {
             var x = x

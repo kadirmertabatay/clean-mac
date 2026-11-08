@@ -9,13 +9,13 @@ struct StorageView: View {
             VStack(alignment: .leading, spacing: 20) {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Depolama Dökümü").font(.title.bold())
-                        Text("Disk alanının birimlere göre dağılımı ve taramanın göremediği alanlar").foregroundStyle(.secondary)
+                        Text(L("Storage Breakdown")).font(.title.bold())
+                        Text(L("How disk space is split across volumes, and the space the scan can’t see")).foregroundStyle(.secondary)
                     }
                     Spacer()
                     Button {
                         Task { await state.loadStorage() }
-                    } label: { Label("Yenile", systemImage: "arrow.clockwise") }
+                    } label: { Label(L("Refresh"), systemImage: "arrow.clockwise") }
                         .disabled(state.isLoadingStorage)
                 }
                 if let r = state.storage {
@@ -24,10 +24,10 @@ struct StorageView: View {
                     snapshotsCard(r)
                     volumesCard(r)
                 } else if state.isLoadingStorage {
-                    ProgressView("Birimler okunuyor…").frame(maxWidth: .infinity).padding(40)
+                    ProgressView(L("Reading volumes…")).frame(maxWidth: .infinity).padding(40)
                 } else {
-                    EmptyStateView(icon: "internaldrive", title: "Birim bilgisi alınamadı",
-                                   message: "diskutil çıktısı okunamadı.")
+                    EmptyStateView(icon: "internaldrive", title: L("Couldn’t get volume information"),
+                                   message: L("Couldn’t read the diskutil output."))
                 }
             }
             .padding(24)
@@ -35,15 +35,15 @@ struct StorageView: View {
             .frame(maxWidth: .infinity)
         }
         .task { if state.storage == nil { await state.loadStorage() } }
-        .confirmationDialog("\(pendingSnapshots.count) anlık görüntü silinsin mi?",
+        .confirmationDialog(L("Delete \(pendingSnapshots.count) snapshots?"),
                             isPresented: Binding(get: { !pendingSnapshots.isEmpty }, set: { if !$0 { pendingSnapshots = [] } })) {
-            Button("Sil", role: .destructive) {
+            Button(L("Delete"), role: .destructive) {
                 let snaps = pendingSnapshots
                 pendingSnapshots = []
                 Task { await state.deleteSnapshots(snaps) }
             }
         } message: {
-            Text("Yerel Time Machine anlık görüntüleri, yedekleme diskin bağlı değilken geri dönüş noktası sağlar. Silmek yer açar; harici diskteki yedeklerine dokunulmaz. Yönetici parolası istenebilir.")
+            Text(L("Local Time Machine snapshots provide restore points while your backup disk isn’t connected. Deleting them frees space; your backups on the external disk aren’t touched. An administrator password may be requested."))
         }
     }
 
@@ -54,9 +54,9 @@ struct StorageView: View {
         return Card {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Label("Başlangıç diski", systemImage: "internaldrive.fill").font(.title3.bold())
+                    Label(L("Startup disk"), systemImage: "internaldrive.fill").font(.title3.bold())
                     Spacer()
-                    Text("\(r.capacity.formattedBytes) kapasite").foregroundStyle(.secondary)
+                    Text(L("\(r.capacity.formattedBytes) capacity")).foregroundStyle(.secondary)
                 }
                 GeometryReader { g in
                     HStack(spacing: 1) {
@@ -72,34 +72,34 @@ struct StorageView: View {
                 }
                 .frame(height: 22)
                 FlowLegend(items: segments.enumerated().map { (Self.palette[$0.offset % Self.palette.count], $0.element.title, $0.element.used) }
-                           + [(Color.gray.opacity(0.45), "Temizlenebilir (macOS boşaltır)", r.purgeable),
-                              (Color.secondary.opacity(0.15), "Boş", r.free)])
+                           + [(Color.gray.opacity(0.45), L("Purgeable (freed by macOS)"), r.purgeable),
+                              (Color.secondary.opacity(0.15), L("Free"), r.free)])
             }
         }
     }
 
     @ViewBuilder private func gapCard(_ r: StorageReport) -> some View {
         if let data = r.dataVolume, let root = state.rootNode, root.url.path == "/" {
-            // Mühürlü sistem birimi sıkıştırıldığı için taramadaki /System boyutu esas alınır.
+            // The sealed system volume is compressed, so the /System size from the scan is used.
             let system = root.children.first { $0.url.path == "/System" }?.size ?? 0
             let scannedData = max(root.size - system, 0)
             let gap = data.used - scannedData
             Card {
                 VStack(alignment: .leading, spacing: 8) {
-                    Label("Veri biriminde taramada görünmeyen alan: \(max(gap, 0).formattedBytes)", systemImage: "eye.slash")
+                    Label(L("Space on the Data volume not visible to the scan: \(max(gap, 0).formattedBytes)"), systemImage: "eye.slash")
                         .font(.headline)
-                    Text("Veri birimi \(data.used.formattedBytes) kullanıyor, tarama bunun \(scannedData.formattedBytes) kadarını görebildi. Fark genellikle okunamayan klasörlerden (\(state.lastScan?.unreadable ?? 0) klasör), başka kullanıcıların dosyalarından, Spotlight dizininden ve sistem önbelleklerinden gelir.")
+                    Text(L("The Data volume uses \(data.used.formattedBytes); the scan could see \(scannedData.formattedBytes) of it. The difference usually comes from unreadable folders (\(state.lastScan?.unreadable ?? 0) folders), other users’ files, the Spotlight index and system caches."))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                     if !state.hasFullDiskAccess {
-                        Button("Tam Disk Erişimi ver (daha fazlasını görmek için)") { Finder.openFullDiskAccessSettings() }
+                        Button(L("Give Full Disk Access (to see more)")) { Finder.openFullDiskAccessSettings() }
                     }
                 }
             }
         } else {
             Card {
                 Label {
-                    Text("Veri birimindeki görünmeyen alanı hesaplamak için Kapsam'ı **Tüm Mac** yapıp tarama yap.")
+                    Text(.init(L("To calculate the hidden space on the Data volume, set the Scope to **Entire Mac** and scan.")))
                 } icon: { Image(systemName: "info.circle") }
                     .foregroundStyle(.secondary)
             }
@@ -110,23 +110,23 @@ struct StorageView: View {
         Card {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    Label("Yerel Time Machine anlık görüntüleri", systemImage: "clock.arrow.circlepath").font(.headline)
+                    Label(L("Local Time Machine snapshots"), systemImage: "clock.arrow.circlepath").font(.headline)
                     Spacer()
                     if r.snapshots.count > 1 {
-                        Button("Tümünü Sil", role: .destructive) { pendingSnapshots = r.snapshots }
+                        Button(L("Delete All"), role: .destructive) { pendingSnapshots = r.snapshots }
                     }
                 }
                 if r.snapshots.isEmpty {
-                    Label("Yerel anlık görüntü yok.", systemImage: "checkmark.circle").foregroundStyle(.green)
+                    Label(L("No local snapshots."), systemImage: "checkmark.circle").foregroundStyle(.green)
                 } else {
-                    Text("Anlık görüntüler disk dolarken macOS tarafından kendiliğinden silinir, ancak uzun süre yer tutabilir. Boyutları macOS tarafından raporlanmaz.")
+                    Text(L("macOS deletes snapshots automatically as the disk fills up, but they can hold space for a long time. macOS doesn’t report their sizes."))
                         .font(.caption).foregroundStyle(.secondary)
                     ForEach(r.snapshots) { s in
                         HStack {
                             Image(systemName: "camera.metering.center.weighted").foregroundStyle(.secondary)
                             Text(s.date?.formatted(date: .abbreviated, time: .shortened) ?? s.dateString)
                             Spacer()
-                            Button("Sil", role: .destructive) { pendingSnapshots = [s] }
+                            Button(L("Delete"), role: .destructive) { pendingSnapshots = [s] }
                         }
                     }
                 }
@@ -136,7 +136,7 @@ struct StorageView: View {
 
     private func volumesCard(_ r: StorageReport) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Birimler").font(.title3.bold())
+            Text(L("Volumes")).font(.title3.bold())
             Card {
                 VStack(spacing: 12) {
                     ForEach(r.volumes) { v in

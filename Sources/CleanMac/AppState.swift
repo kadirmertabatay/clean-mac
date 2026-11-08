@@ -8,22 +8,22 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
 
     var title: String {
         switch self {
-        case .assistant: "Akıllı Asistan"
-        case .smart: "Akıllı Silme"
-        case .overview: "Genel Bakış"
-        case .storage: "Depolama Dökümü"
-        case .growth: "Ne Büyüdü?"
-        case .explorer: "Klasör Gezgini"
-        case .largeFiles: "Büyük Dosyalar"
-        case .duplicates: "Tekrarlanan Dosyalar"
-        case .photos: "Benzer Fotoğraflar"
-        case .junk: "Gereksiz Dosyalar"
-        case .apps: "Uygulamalar"
-        case .developer: "Geliştirici"
+        case .assistant: L("Smart Assistant")
+        case .smart: L("Smart Cleanup")
+        case .overview: L("Overview")
+        case .storage: L("Storage Breakdown")
+        case .growth: L("What Grew?")
+        case .explorer: L("Folder Explorer")
+        case .largeFiles: L("Large Files")
+        case .duplicates: L("Duplicate Files")
+        case .photos: L("Similar Photos")
+        case .junk: L("Junk Files")
+        case .apps: L("Apps")
+        case .developer: L("Developer")
         case .docker: "Docker"
-        case .rules: "Otomatik Temizlik"
-        case .history: "Temizlik Geçmişi"
-        case .exclusions: "Hariç Tutulanlar"
+        case .rules: L("Auto Cleanup")
+        case .history: L("Cleanup History")
+        case .exclusions: L("Exclusions")
         }
     }
 
@@ -72,7 +72,7 @@ final class AppState: ObservableObject {
     @Published private(set) var hasFullDiskAccess = AppState.checkFullDiskAccess()
     @Published var toast: Toast?
 
-    // Klasör taraması
+    // Folder scan
     @Published var scanRoot: URL {
         didSet { UserDefaults.standard.set(scanRoot.path, forKey: "scanRootPath") }
     }
@@ -85,7 +85,7 @@ final class AppState: ObservableObject {
     @Published private(set) var lastScan: ScanSummary?
     private var scanTask: Task<ScanResult, Never>?
 
-    // Tekrarlanan dosyalar
+    // Duplicate files
     @Published private(set) var duplicateGroups: [DuplicateGroup] = []
     @Published private(set) var isFindingDuplicates = false
     @Published private(set) var duplicateProgress: Double = 0
@@ -93,40 +93,40 @@ final class AppState: ObservableObject {
     @Published var duplicateMinSize: Int64 = 1_000_000
     private var duplicateTask: Task<[DuplicateGroup], Never>?
 
-    // Benzer fotoğraflar
+    // Similar photos
     @Published private(set) var similarPhotoGroups: [[FileEntry]] = []
     @Published private(set) var isFindingSimilar = false
     @Published private(set) var similarProgress: Double = 0
     @Published private(set) var similarPhotosReady = false
     private var similarTask: Task<[[FileEntry]], Never>?
 
-    // Gereksiz dosyalar
+    // Junk files
     @Published private(set) var junkCategories: [JunkCategory] = []
     @Published private(set) var isScanningJunk = false
     @Published private(set) var junkReady = false
 
-    // Asistan
+    // Assistant
     @Published private(set) var isAnalyzing = false
     @Published private(set) var analysisStep = ""
     @Published private(set) var lastAnalysis: Date?
     @Published var largeFilesStaleOnly = false
     @Published private(set) var isRemoving = false
-    /// Arşivleme sürüyorsa (tamamlanan, toplam, şu anki dosya).
+    /// Set while archiving is in progress (completed, total, current file).
     @Published private(set) var archiveProgress: (done: Int, total: Int, current: String)?
     private var junkTask: Task<[JunkCategory], Never>?
     private var analysisCancelled = false
 
-    // Depolama dökümü
+    // Storage breakdown
     @Published private(set) var storage: StorageReport?
     @Published private(set) var isLoadingStorage = false
 
-    // Uygulamalar
+    // Apps
     @Published private(set) var apps: [InstalledApp] = []
     @Published private(set) var isLoadingApps = false
-    /// Docker'ın sanal diskinin boyutu (Docker yüklüyse).
+    /// Size of Docker's virtual disk (if Docker is installed).
     @Published private(set) var dockerDataSize: Int64 = 0
 
-    // Ne büyüdü? (en yenisi başta)
+    // What grew? (newest first)
     @Published private(set) var scanSnapshots: [ScanSnapshot] = []
     private let snapshotStore: SnapshotStore
 
@@ -135,14 +135,14 @@ final class AppState: ObservableObject {
     @Published private(set) var isLoadingDocker = false
     static let dockerInstalled = DockerService.isInstalled
 
-    // Akıllı Silme
+    // Smart Cleanup
     @Published private(set) var smartProtectionIDs: Set<String>
     @Published private(set) var smartStep = ""
 
-    // Otomatik temizlik kuralları
+    // Auto cleanup rules
     @Published private(set) var rules: [CleanupRule] = []
 
-    // Geçmiş ve hariç tutulanlar
+    // History and exclusions
     @Published private(set) var history: [HistoryRecord] = []
     @Published private(set) var excludedPaths: [String]
     private let historyURL: URL
@@ -172,14 +172,14 @@ final class AppState: ObservableObject {
         }
     }
 
-    // MARK: - Genel
+    // MARK: - General
 
     func refreshDisk() {
         disk = DiskInfo.current()
         hasFullDiskAccess = Self.checkFullDiskAccess()
     }
 
-    /// Tam Disk Erişimi olmadan okunamayan bir klasörü yoklar (izin istemi tetiklemez).
+    /// Probes a folder that can't be read without Full Disk Access (doesn't trigger a permission prompt).
     static func checkFullDiskAccess() -> Bool {
         let fm = FileManager.default
         for p in ["Library/Safari", "Library/Mail", "Library/Messages"] {
@@ -204,8 +204,8 @@ final class AppState: ObservableObject {
 
     var scanScopeTitle: String {
         switch scanRoot.path {
-        case "/": "Tüm Mac"
-        case Self.home.path: "Ana Klasör (~)"
+        case "/": L("Entire Mac")
+        case Self.home.path: L("Home Folder (~)")
         default: scanRoot.lastPathComponent
         }
     }
@@ -224,20 +224,20 @@ final class AppState: ObservableObject {
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
         panel.directoryURL = scanRoot
-        panel.prompt = "Tara"
-        panel.message = "Analiz edilecek klasörü seçin"
+        panel.prompt = L("Scan")
+        panel.message = L("Choose the folder to analyze")
         guard panel.runModal() == .OK, let url = panel.url else { return false }
         scanRoot = url
         return true
     }
 
-    // MARK: - Tarama
+    // MARK: - Scanning
 
     func startScan() {
         Task { await scan() }
     }
 
-    /// Tarama, tekrar arama, gereksiz dosya taraması ve devam eden tam analizi durdurur.
+    /// Stops the scan, duplicate search, junk scan and any running full analysis.
     func cancelScan() {
         analysisCancelled = true
         scanTask?.cancel()
@@ -246,7 +246,7 @@ final class AppState: ObservableObject {
         similarTask?.cancel()
     }
 
-    /// Tarama tamamlanırsa true, durdurulursa false döner.
+    /// Returns true if the scan completed, false if it was stopped.
     @discardableResult
     func scan() async -> Bool {
         guard !isScanning else { return false }
@@ -274,7 +274,7 @@ final class AppState: ObservableObject {
         scanProgress = nil
 
         if task.isCancelled {
-            showToast("Tarama durduruldu.")
+            showToast(L("Scan stopped."))
             return false
         }
         rootNode = result.root
@@ -355,7 +355,7 @@ final class AppState: ObservableObject {
         }
     }
 
-    /// Asistanın tek tıkla çalıştırdığı tam analiz: gereksizler → klasör taraması → tekrarlar.
+    /// The one-click full analysis run by the assistant: junk → folder scan → duplicates.
     func runFullAnalysis() async {
         guard !isAnalyzing else { return }
         isAnalyzing = true
@@ -364,24 +364,24 @@ final class AppState: ObservableObject {
             isAnalyzing = false
             analysisStep = ""
         }
-        analysisStep = "Önbellekler ve gereksiz dosyalar aranıyor…"
+        analysisStep = L("Looking for caches and junk files…")
         await scanJunk()
         guard !analysisCancelled else { return }
-        analysisStep = "\(scanRoot.abbreviatedPath) klasörü taranıyor…"
+        analysisStep = L("Scanning \(scanRoot.abbreviatedPath)…")
         guard await scan(), !analysisCancelled else { return }
-        analysisStep = "Tekrarlanan dosyalar karşılaştırılıyor…"
+        analysisStep = L("Comparing duplicate files…")
         await findDuplicates()
         guard !analysisCancelled else { return }
         await loadStorage()
-        analysisStep = "Uygulamalar ölçülüyor…"
+        analysisStep = L("Measuring apps…")
         await loadApps()
         lastAnalysis = Date()
         refreshDisk()
     }
 
-    // MARK: - Silme
+    // MARK: - Removal
 
-    /// Öğeleri Çöp Kutusu'na taşır (ya da kalıcı siler) ve tüm listeleri günceller.
+    /// Moves items to the Trash (or deletes them permanently) and updates all lists.
     @discardableResult
     func remove(_ targets: [RemovalTarget], permanently: Bool) async -> OperationResult {
         guard !targets.isEmpty, !isRemoving else { return OperationResult() }
@@ -419,7 +419,7 @@ final class AppState: ObservableObject {
             history.insert(contentsOf: result.records.reversed(), at: 0)
             saveHistory()
         }
-        // Sembolik bağlantılı yollar (/var ↔ /private/var) için iki biçimi de eşleştir.
+        // Match both forms for symlinked paths (/var ↔ /private/var).
         var removedPaths = Set<String>()
         for url in result.succeeded {
             removedPaths.insert(url.path)
@@ -433,15 +433,15 @@ final class AppState: ObservableObject {
         applyRemoval(removedPaths)
 
         if !result.succeeded.isEmpty {
-            let verb = permanently ? "kalıcı olarak silindi" : "Çöp Kutusu'na taşındı"
-            var message = "\(result.succeeded.count) öğe \(verb) · \(result.freed.formattedBytes)"
+            let verb = permanently ? L("deleted permanently") : L("moved to the Trash")
+            var message = L("\(result.succeeded.count) items \(verb) · \(result.freed.formattedBytes)")
             let notDone = result.failed.count + result.skipped.count
-            if notDone > 0 { message += " · \(notDone) öğe atlandı" }
+            if notDone > 0 { message += L(" · \(notDone) skipped") }
             showToast(message)
         } else if !result.skipped.isEmpty {
-            showToast("Güvenlik kontrolü: \(result.skipped.first!)\(result.skipped.count > 1 ? " (+\(result.skipped.count - 1))" : "")", isError: true)
+            showToast(L("Safety check: \(result.skipped.first!)\(result.skipped.count > 1 ? " (+\(result.skipped.count - 1))" : "")"), isError: true)
         } else if !result.failed.isEmpty {
-            showToast("Öğeler silinemedi: izin yok ya da kullanımda olabilir.", isError: true)
+            showToast(L("Items could not be removed: permission denied or they may be in use."), isError: true)
         }
         refreshDisk()
         if junkReady { await refreshJunkCategory("trash") }
@@ -454,12 +454,12 @@ final class AppState: ObservableObject {
         panel.canChooseFiles = false
         panel.canCreateDirectories = true
         panel.directoryURL = URL(fileURLWithPath: "/Volumes")
-        panel.prompt = "Buraya Arşivle"
-        panel.message = "Dosyaların kopyalanacağı harici diski ya da klasörü seç"
+        panel.prompt = L("Archive Here")
+        panel.message = L("Choose the external disk or folder to copy the files to")
         return panel.runModal() == .OK ? panel.url : nil
     }
 
-    /// Dosyaları hedefe kopyalar, doğrular; yalnızca doğrulananların orijinallerini Çöp Kutusu'na taşır.
+    /// Copies files to the destination and verifies them; only the originals of verified copies are moved to the Trash.
     func archive(_ entries: [FileEntry], to destination: URL) async {
         guard archiveProgress == nil, !entries.isEmpty else { return }
         archiveProgress = (0, entries.count, "")
@@ -477,8 +477,8 @@ final class AppState: ObservableObject {
         case .success(let r):
             let targets = r.verified.map { RemovalTarget(url: $0.source.url, size: $0.source.size, expectedModified: $0.source.modified) }
             if !targets.isEmpty { await remove(targets, permanently: false) }
-            var message = "\(r.verified.count) dosya \(destination.lastPathComponent) konumuna arşivlendi ve doğrulandı; orijinaller Çöp Kutusu'nda."
-            if !r.failed.isEmpty { message += " \(r.failed.count) dosya atlandı (\(r.failed[0].reason))." }
+            var message = L("\(r.verified.count) files archived to \(destination.lastPathComponent) and verified; the originals are in the Trash.")
+            if !r.failed.isEmpty { message += L(" \(r.failed.count) files skipped (\(r.failed[0].reason)).") }
             showToast(message, isError: r.verified.isEmpty)
         }
     }
@@ -490,27 +490,27 @@ final class AppState: ObservableObject {
         await remove(items.map { RemovalTarget(url: $0.url, size: $0.size) }, permanently: permanent)
     }
 
-    /// Silmeden hemen önce yapılan güvenlik kontrolü. Sorun yoksa nil döner.
+    /// Safety check performed right before removal. Returns nil if there's no problem.
     nonisolated static func safetyProblem(for t: RemovalTarget, excluded: [String], fm: FileManager) -> String? {
         let path = t.url.path
         if excluded.contains(where: { path == $0 || path.hasPrefix($0 + "/") }) {
-            return "hariç tutulanlar listesinde"
+            return L("in the exclusions list")
         }
         var st = stat()
-        guard lstat(path, &st) == 0 else { return "artık mevcut değil" }
+        guard lstat(path, &st) == 0 else { return L("no longer exists") }
         if let expected = t.expectedModified {
             let current = (try? t.url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
             if let current, abs(current.timeIntervalSince(expected)) > 1 {
-                return "taramadan sonra değiştirilmiş, yeniden tara"
+                return L("changed since the scan, scan again")
             }
         }
         if !t.keepAnyOf.isEmpty, !t.keepAnyOf.contains(where: { fm.fileExists(atPath: $0.path) }) {
-            return "korunacak kopya artık yok, bu dosya son kopya olabilir"
+            return L("the copy to keep no longer exists, this may be the last copy")
         }
         return nil
     }
 
-    // MARK: - Depolama dökümü
+    // MARK: - Storage breakdown
 
     func loadStorage() async {
         guard !isLoadingStorage else { return }
@@ -524,15 +524,15 @@ final class AppState: ObservableObject {
             snapshots.compactMap { StorageInspector.delete($0) }
         }.value
         if errors.isEmpty {
-            showToast("\(snapshots.count) anlık görüntü silindi.")
+            showToast(L("\(snapshots.count) snapshots deleted."))
         } else {
-            showToast("Bazı anlık görüntüler silinemedi: \(errors[0])", isError: true)
+            showToast(L("Some snapshots could not be deleted: \(errors[0])"), isError: true)
         }
         await loadStorage()
         refreshDisk()
     }
 
-    // MARK: - Uygulamalar
+    // MARK: - Apps
 
     func loadApps() async {
         guard !isLoadingApps else { return }
@@ -544,14 +544,14 @@ final class AppState: ObservableObject {
         isLoadingApps = false
     }
 
-    /// Uygulamayı (açıksa kapatıp) seçili kalıntılarıyla birlikte Çöp Kutusu'na taşır.
+    /// Moves the app (quitting it first if running) to the Trash together with the selected leftovers.
     func uninstall(_ app: InstalledApp, leftovers: [AppLeftover]) async {
         guard !app.isApple else { return }
         if let id = app.bundleID {
             for running in NSRunningApplication.runningApplications(withBundleIdentifier: id) { running.terminate() }
             for _ in 0..<20 where app.isRunning { try? await Task.sleep(for: .milliseconds(250)) }
             if app.isRunning {
-                showToast("\(app.name) kapatılamadı; kapatıp tekrar dene.", isError: true)
+                showToast(L("Couldn’t quit \(app.name); quit it and try again."), isError: true)
                 return
             }
         }
@@ -560,11 +560,11 @@ final class AppState: ObservableObject {
         if result.succeeded.contains(app.url) {
             apps.removeAll { $0.id == app.id }
         } else {
-            showToast("\(app.name) taşınamadı: yönetici izni gerekiyor olabilir. Finder'dan Çöp Kutusu'na sürükleyebilirsin.", isError: true)
+            showToast(L("Couldn’t move \(app.name): administrator permission may be required. You can drag it to the Trash in Finder."), isError: true)
         }
     }
 
-    // MARK: - Akıllı Silme
+    // MARK: - Smart Cleanup
 
     var protectionCatalog: [Protection] { ProtectionCatalog.all(apps: apps) }
     var activeProtections: [Protection] { protectionCatalog.filter { smartProtectionIDs.contains($0.id) } }
@@ -574,15 +574,15 @@ final class AppState: ObservableObject {
         UserDefaults.standard.set(Array(smartProtectionIDs).sorted(), forKey: "smartProtections")
     }
 
-    /// Akıllı Silme korumalarından biri ya da hariç tutma listesi bu yolu kapsıyor mu?
+    /// Does a Smart Cleanup protection or the exclusions list cover this path?
     func isSmartProtected(_ path: String) -> Bool {
         isExcluded(path) || Protection.protecting(path, in: activeProtections) != nil
     }
 
     func buildSmartPlan(level: SmartLevel) async -> SmartPlan? {
         defer { smartStep = "" }
-        if apps.isEmpty { smartStep = "Uygulamalar okunuyor…"; await loadApps() }
-        smartStep = "Önbellekler ve gereksiz dosyalar aranıyor…"
+        if apps.isEmpty { smartStep = L("Reading apps…"); await loadApps() }
+        smartStep = L("Looking for caches and junk files…")
         await scanJunk()
         var groups: [SmartPlanGroup] = []
         for id in level.junkCategories {
@@ -594,23 +594,23 @@ final class AppState: ObservableObject {
 
         if level != .safe {
             if rootNode == nil {
-                smartStep = "\(scanRoot.abbreviatedPath) taranıyor…"
+                smartStep = L("Scanning \(scanRoot.abbreviatedPath)…")
                 guard await scan() else { return nil }
             }
             if let days = level.staleProjectDays {
-                smartStep = "Projeler inceleniyor…"
+                smartStep = L("Inspecting projects…")
                 let artifacts = visibleDevArtifacts
                 let cutoff = Date().addingTimeInterval(-Double(days) * 86_400)
                 let stale = await Task.detached { artifacts.filter { (DevTools.projectLastActivity($0.url) ?? .distantFuture) < cutoff } }.value
                 if !stale.isEmpty {
-                    groups.append(SmartPlanGroup(id: "deps", title: "\(days)+ gündür dokunulmamış projelerin bağımlılıkları",
-                                                 detail: "node_modules, .venv, Pods… Projede tekrar çalışınca npm install / pip install ile geri gelir.",
+                    groups.append(SmartPlanGroup(id: "deps", title: L("Dependencies of projects untouched for \(days)+ days"),
+                                                 detail: L("node_modules, .venv, Pods… They come back with npm install / pip install when you work on the project again."),
                                                  icon: "shippingbox", items: stale.map { SmartPlanItem(url: $0.url, size: $0.size) },
                                                  regenerable: false))
                 }
             }
             if level.includesDuplicates {
-                if !duplicatesReady { smartStep = "Tekrarlanan dosyalar karşılaştırılıyor…"; await findDuplicates() }
+                if !duplicatesReady { smartStep = L("Comparing duplicate files…"); await findDuplicates() }
                 var items: [SmartPlanItem] = []
                 for g in duplicateGroups {
                     let files = g.files.filter { !$0.isProtected }
@@ -618,8 +618,8 @@ final class AppState: ObservableObject {
                     items += files.dropFirst().map { SmartPlanItem(url: $0.url, size: $0.size, modified: $0.modified, keepAnyOf: [keep.url]) }
                 }
                 if !items.isEmpty {
-                    groups.append(SmartPlanGroup(id: "dups", title: "Birebir aynı kopyalar",
-                                                 detail: "Her grupta en eski dosya korunur; diğer kopyalar kaldırılır.",
+                    groups.append(SmartPlanGroup(id: "dups", title: L("Exact duplicates"),
+                                                 detail: L("The oldest file in each group is kept; the other copies are removed."),
                                                  icon: "doc.on.doc", items: items, regenerable: false))
                 }
             }
@@ -650,7 +650,7 @@ final class AppState: ObservableObject {
         isLoadingDocker = false
     }
 
-    /// Docker Desktop'ı başlatır ve motor hazır olana kadar (en fazla ~2 dk) bekler.
+    /// Starts Docker Desktop and waits until the engine is ready (up to ~2 minutes).
     func startDocker() async {
         _ = await Task.detached { () -> Bool in
             if let docker = DevTools.dockerPath, Shell.run(docker, ["desktop", "start"]).status == 0 { return true }
@@ -663,7 +663,7 @@ final class AppState: ObservableObject {
         await loadDocker()
     }
 
-    // MARK: - Otomatik temizlik
+    // MARK: - Auto cleanup
 
     func addRule(_ rule: CleanupRule) {
         guard !rules.contains(where: { $0.kind == rule.kind }) else { return }
@@ -701,12 +701,12 @@ final class AppState: ObservableObject {
         }
     }
 
-    /// Zamanı gelen kuralları işler: otomatikse uygular, değilse önizleme boyutunu hesaplayıp bildirim gönderir.
+    /// Processes due rules: applies them if automatic, otherwise computes the preview size and sends a notification.
     func checkRules() async {
         for rule in rules where rule.isDue() {
             if rule.autoApply {
                 await runRule(rule.id)
-                SpaceMonitor.notify(title: "Otomatik temizlik yapıldı", body: rule.title)
+                SpaceMonitor.notify(title: L("Automatic cleanup done"), body: rule.title)
             } else if rule.pendingSize == nil {
                 let targets = await Task.detached { RuleEngine.targets(for: rule) }.value.filter { !isSmartProtected($0.url.path) }
                 let size = targets.reduce(Int64(0)) { $0 + $1.size }
@@ -714,26 +714,26 @@ final class AppState: ObservableObject {
                     updateRule(rule.id) { $0.lastRun = Date() }
                 } else {
                     updateRule(rule.id) { $0.pendingSize = size }
-                    SpaceMonitor.notify(title: "Temizlik onay bekliyor",
-                                        body: "\(rule.title): \(size.formattedBytes). Uygulamak için CleanMac › Otomatik Temizlik.")
+                    SpaceMonitor.notify(title: L("Cleanup awaiting approval"),
+                                        body: L("\(rule.title): \(size.formattedBytes). To apply, open CleanMac › Auto Cleanup."))
                 }
             }
         }
     }
 
-    // MARK: - Geçmiş
+    // MARK: - History
 
-    /// Çöp Kutusu'na taşınan öğeyi eski yerine geri koyar.
+    /// Puts an item that was moved to the Trash back in its original location.
     func restore(_ record: HistoryRecord) {
         guard let trashPath = record.trashPath, !record.restored else { return }
         let fm = FileManager.default
         let original = URL(fileURLWithPath: record.originalPath)
         guard fm.fileExists(atPath: trashPath) else {
-            showToast("\(record.name) Çöp Kutusu'nda bulunamadı (çöp boşaltılmış olabilir).", isError: true)
+            showToast(L("\(record.name) wasn’t found in the Trash (it may have been emptied)."), isError: true)
             return
         }
         guard !fm.fileExists(atPath: original.path) else {
-            showToast("Eski konumda aynı adla bir öğe var: \(original.abbreviatedPath)", isError: true)
+            showToast(L("An item with the same name exists at the original location: \(original.abbreviatedPath)"), isError: true)
             return
         }
         do {
@@ -741,11 +741,11 @@ final class AppState: ObservableObject {
             try fm.moveItem(at: URL(fileURLWithPath: trashPath), to: original)
             if let i = history.firstIndex(where: { $0.id == record.id }) { history[i].restored = true }
             saveHistory()
-            showToast("\(record.name) geri alındı. Listeleri güncellemek için yeniden tarayabilirsin.")
+            showToast(L("\(record.name) restored. Scan again to refresh the lists."))
             refreshDisk()
             if junkReady { Task { await refreshJunkCategory("trash") } }
         } catch {
-            showToast("Geri alınamadı: \(error.localizedDescription)", isError: true)
+            showToast(L("Couldn’t restore: \(error.localizedDescription)"), isError: true)
         }
     }
 
@@ -768,7 +768,7 @@ final class AppState: ObservableObject {
         }
     }
 
-    // MARK: - Hariç tutulanlar
+    // MARK: - Exclusions
 
     func isExcluded(_ path: String) -> Bool {
         excludedPaths.contains { path == $0 || path.hasPrefix($0 + "/") }
@@ -782,7 +782,7 @@ final class AppState: ObservableObject {
         excludedPaths.sort()
         UserDefaults.standard.set(excludedPaths, forKey: "excludedPaths")
         junkCategories = junkCategories.map(withoutExcluded)
-        showToast("\(url.abbreviatedPath) artık önerilerde ve silme işlemlerinde yok sayılacak.")
+        showToast(L("\(url.abbreviatedPath) will now be ignored by suggestions and cleanups."))
     }
 
     func removeExclusion(_ path: String) {
@@ -795,8 +795,8 @@ final class AppState: ObservableObject {
         panel.canChooseDirectories = true
         panel.canChooseFiles = true
         panel.allowsMultipleSelection = true
-        panel.prompt = "Hariç Tut"
-        panel.message = "Temizlik önerilerinden korunacak klasör ya da dosyaları seç"
+        panel.prompt = L("Exclude")
+        panel.message = L("Choose folders or files to protect from cleanup suggestions")
         guard panel.runModal() == .OK else { return }
         panel.urls.forEach(addExclusion)
     }
@@ -807,7 +807,7 @@ final class AppState: ObservableObject {
         return c
     }
 
-    /// Hariç tutulanlar dışındaki proje bağımlılık klasörleri.
+    /// Project dependency folders outside the exclusions.
     var visibleDevArtifacts: [FileNode] { devArtifacts.filter { !isExcluded($0.url.path) } }
 
     private func applyRemoval(_ removed: Set<String>) {

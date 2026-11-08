@@ -4,7 +4,7 @@ import XCTest
 
 @MainActor
 final class SplashTests: XCTestCase {
-    /// Karşılama ekranını görüntü olarak çizer; CLEANMAC_SPLASH_PNG verilirse dosyaya yazar.
+    /// Renders the welcome screen as an image; writes it to a file if CLEANMAC_SPLASH_PNG is set.
     func testSplashRenders() throws {
         for scheme in [ColorScheme.light, .dark] {
             let logo = URL(fileURLWithPath: #filePath)
