@@ -15,7 +15,7 @@ swift run                   # runs the app without a bundle (English only, no ic
 ./build-app.sh              # build/CleanMac.app (release, ad-hoc signed, with translations)
 open build/CleanMac.app
 ./build-app.sh --install    # also copies it to /Applications
-./build-app.sh --zip        # universal (arm64 + x86_64) build, build/CleanMac-<version>.zip and its SHA-256 file
+./build-app.sh --release    # universal (arm64 + x86_64) build plus build/CleanMac.dmg, build/CleanMac-<version>.zip and build/SHA256SUMS.txt
 ```
 
 `build-app.sh`:
@@ -147,9 +147,11 @@ Releases follow git flow (see [CONTRIBUTING.md](../CONTRIBUTING.md#branching-mod
 
    With branch protection on, open pull requests from `release/1.1.0` into `main` and `develop` instead, and push only the tag.
 
-6. Pushing the tag starts the `Release` workflow. It builds the universal app and creates a draft GitHub release with the archive and its checksum; GitHub's generated release notes are grouped by pull request labels (`.github/release.yml`). Review the draft and publish it.
+6. Pushing the tag starts the `Release` workflow. It builds the universal app and creates a draft GitHub release with `CleanMac.dmg`, the zip and `SHA256SUMS.txt`; GitHub's generated release notes are grouped by pull request labels (`.github/release.yml`). Review the draft and publish it.
 
-   To build and publish by hand instead: `./build-app.sh --zip`, then `gh release create v1.1.0 build/CleanMac-1.1.0.zip build/CleanMac-1.1.0.zip.sha256 --title "CleanMac 1.1.0"`.
+   To build and publish by hand instead: `./build-app.sh --release`, then `gh release create v1.1.0 build/CleanMac.dmg build/CleanMac-1.1.0.zip build/SHA256SUMS.txt --title "CleanMac 1.1.0"`.
+
+   The DMG keeps the unversioned name `CleanMac.dmg` on purpose: the README links to `releases/latest/download/CleanMac.dmg`, which always serves the newest published (non-draft) release.
 
 Hotfixes work the same way, but the branch (`hotfix/1.1.1`) starts from `main`.
 

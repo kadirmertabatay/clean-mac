@@ -1,6 +1,9 @@
 name: Release
 
-# When a tag like v1.2.3 is pushed, builds the universal app and creates a draft GitHub release.
+# When a tag like v1.2.3 is pushed, builds the universal app and creates a draft GitHub release with:
+#   CleanMac.dmg            drag-to-Applications installer (stable name, used by the README download link)
+#   CleanMac-<version>.zip  the same app as a zip
+#   SHA256SUMS.txt          checksums of both
 on:
   push:
     tags: ["v*"]
@@ -15,15 +18,25 @@ jobs:
       - uses: actions/checkout@v4
       - name: Test
         run: swift test
-      - name: Universal bundle and archive
-        run: ./build-app.sh --zip
+      - name: Build universal app, DMG and zip
+        run: ./build-app.sh --release
       - name: Create draft release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           ZIP="build/CleanMac-$VERSION.zip"
-          test -f "$ZIP" || { echo "The Info.plist version ($ZIP) does not match the tag"; exit 1; }
-          SHA=$(cut -d' ' -f1 "$ZIP.sha256")
-          gh release create "$GITHUB_REF_NAME" "$ZIP" "$ZIP.sha256" --draft --title "CleanMac $VERSION" \
-            --generate-notes --notes "See the README for installation and first launch. SHA-256: \`$SHA\`"
+          test -f "$ZIP" || { echo "The Info.plist version does not match the tag $GITHUB_REF_NAME"; exit 1; }
+          SHA=$(awk '$2 == "CleanMac.dmg" {print $1}' build/SHA256SUMS.txt)
+          cat > notes.md <<EOF
+          ## Download
+
+          **[CleanMac.dmg](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/CleanMac.dmg)**: open it and drag CleanMac to Applications. Universal build for Apple silicon and Intel, macOS 14 or later.
+
+          The app is ad-hoc signed. On first launch, right-click it › Open, or use System Settings › Privacy & Security › Open Anyway.
+
+          SHA-256 (CleanMac.dmg): \`$SHA\`
+
+          EOF
+          gh release create "$GITHUB_REF_NAME" build/CleanMac.dmg "$ZIP" build/SHA256SUMS.txt \
+            --draft --title "CleanMac $VERSION" --notes-file notes.md --generate-notes

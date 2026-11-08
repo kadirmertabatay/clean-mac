@@ -20,6 +20,12 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/kadirmertabatay/clean-mac/releases/latest/download/CleanMac.dmg"><img src="https://img.shields.io/badge/Download_for_macOS-CleanMac.dmg-0A84FF?style=for-the-badge&logo=apple&logoColor=white" alt="Download CleanMac for macOS (.dmg)"></a>
+  <br>
+  <sub>Free · macOS 14 or later · Apple silicon and Intel · <a href="https://github.com/kadirmertabatay/clean-mac/releases">All releases</a></sub>
+</p>
+
+<p align="center">
   <a href="#installation">Installation</a> ·
   <a href="#features">Features</a> ·
   <a href="#safety-principles">Safety</a> ·
@@ -103,15 +109,15 @@ Every screen is described in detail in **[docs/features.md](docs/features.md)**.
 
 ## Installation
 
-### Download a release
+### Download (recommended)
 
-1. Download `CleanMac-<version>.zip` from the [Releases](https://github.com/kadirmertabatay/clean-mac/releases) page and unzip it.
-2. Move `CleanMac.app` to your **Applications** folder.
-3. The app is ad-hoc signed, not signed with an Apple Developer ID. If macOS warns you on first launch, **right-click the app › Open**. On macOS 15 and later, use **System Settings › Privacy & Security › Open Anyway**.
+1. **[Download CleanMac.dmg](https://github.com/kadirmertabatay/clean-mac/releases/latest/download/CleanMac.dmg)**: always the latest version.
+2. Open the DMG and drag **CleanMac** onto the **Applications** folder.
+3. Open CleanMac from Applications. The app is ad-hoc signed, not signed with an Apple Developer ID, so macOS warns you the first time:
+   - **macOS 14:** right-click the app › **Open** › **Open**.
+   - **macOS 15 and later:** try to open it once, then go to **System Settings › Privacy & Security** and click **Open Anyway**.
 
-> You can verify the download against the SHA-256 in the release notes: `shasum -a 256 CleanMac-<version>.zip`
-
-Releases are universal binaries for Apple silicon and Intel Macs.
+This is only needed on the first launch. Releases are universal binaries for Apple silicon and Intel Macs. A zip of the same app and a `SHA256SUMS.txt` file are attached to every [release](https://github.com/kadirmertabatay/clean-mac/releases); verify the download with `shasum -a 256 CleanMac.dmg`.
 
 ### Build from source
 
