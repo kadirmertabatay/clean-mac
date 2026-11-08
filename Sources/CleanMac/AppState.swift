@@ -182,7 +182,7 @@ final class AppState: ObservableObject {
         switch scanRoot.path {
         case "/": "Tüm Mac"
         case Self.home.path: "Ana Klasör (~)"
-        default: scanRoot.abbreviatedPath
+        default: scanRoot.lastPathComponent
         }
     }
 

@@ -7,10 +7,18 @@ struct ExplorerView: View {
     @State private var selection = Set<FileNode.ID>()
     @State private var pendingRemoval: [FileNode] = []
     @State private var previewURL: URL?
+    @AppStorage("explorerTreemap") private var treemapMode = false
 
     var body: some View {
         VStack(spacing: 0) {
             PageHeader(title: "Klasör Gezgini", subtitle: subtitle) {
+                Picker("", selection: $treemapMode) {
+                    Image(systemName: "list.bullet").help("Liste").tag(false)
+                    Image(systemName: "square.grid.2x2").help("Treemap").tag(true)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
                 ScanScopeMenu { state.startScan() }
                 Button {
                     state.startScan()
@@ -23,15 +31,19 @@ struct ExplorerView: View {
             } else if let node = state.currentNode {
                 breadcrumb(node)
                 Divider()
-                HStack(spacing: 0) {
-                    list(node)
-                    Divider()
-                    DistributionChart(node: node).frame(width: 300)
+                if treemapMode {
+                    TreemapView(node: node) { pendingRemoval = [$0] }
+                } else {
+                    HStack(spacing: 0) {
+                        list(node)
+                        Divider()
+                        DistributionChart(node: node).frame(width: 300)
+                    }
                 }
             } else {
                 EmptyStateView(icon: "folder.badge.gearshape", title: "Henüz tarama yapılmadı",
                                message: "Bir klasörü tarayarak hangi klasör ve dosyaların ne kadar yer kapladığını ağaç halinde görebilirsin.",
-                               actionTitle: "\(state.scanRoot.abbreviatedPath) Klasörünü Tara") { state.startScan() }
+                               actionTitle: "Taramayı Başlat") { state.startScan() }
             }
         }
         .confirmationDialog("Seçilenler Çöp Kutusu'na taşınsın mı?",

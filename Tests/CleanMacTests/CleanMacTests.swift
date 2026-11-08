@@ -359,3 +359,27 @@ final class RuleTests: XCTestCase {
         XCTAssertEqual(decoded.map(\.kind), rules.map(\.kind))
     }
 }
+
+final class TreemapTests: XCTestCase {
+    func testLayoutFillsAreaProportionally() {
+        let values: [Double] = [6, 6, 4, 3, 2, 2, 1]
+        let rect = CGRect(x: 0, y: 0, width: 600, height: 400)
+        let rects = Treemap.layout(values, in: rect)
+        let total = values.reduce(0, +)
+        for (v, r) in zip(values, rects) {
+            XCTAssertEqual(Double(r.width * r.height), v / total * 240_000, accuracy: 1)
+            XCTAssertTrue(rect.insetBy(dx: -0.5, dy: -0.5).contains(r), "\(r)")
+        }
+        // Dikdörtgenler çakışmamalı.
+        for i in rects.indices { for j in rects.indices where i < j {
+            XCTAssertLessThan(rects[i].intersection(rects[j]).width * rects[i].intersection(rects[j]).height, 1)
+        } }
+        // Squarified: en/boy oranları makul olmalı.
+        XCTAssertLessThan(rects.map { max($0.width / $0.height, $0.height / $0.width) }.max()!, 4)
+    }
+
+    func testEmptyAndZeroInput() {
+        XCTAssertEqual(Treemap.layout([], in: CGRect(x: 0, y: 0, width: 10, height: 10)), [])
+        XCTAssertEqual(Treemap.layout([0, 0], in: CGRect(x: 0, y: 0, width: 10, height: 10)), [.zero, .zero])
+    }
+}
