@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
-    case assistant, overview, explorer, largeFiles, duplicates, junk, history, exclusions
+    case assistant, overview, storage, explorer, largeFiles, duplicates, junk, history, exclusions
 
     var id: String { rawValue }
 
@@ -10,6 +10,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .assistant: "Akıllı Asistan"
         case .overview: "Genel Bakış"
+        case .storage: "Depolama Dökümü"
         case .explorer: "Klasör Gezgini"
         case .largeFiles: "Büyük Dosyalar"
         case .duplicates: "Tekrarlanan Dosyalar"
@@ -23,6 +24,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .assistant: "sparkles"
         case .overview: "internaldrive"
+        case .storage: "chart.bar.doc.horizontal"
         case .explorer: "folder"
         case .largeFiles: "doc.badge.arrow.up"
         case .duplicates: "doc.on.doc"
@@ -90,6 +92,10 @@ final class AppState: ObservableObject {
     @Published private(set) var isRemoving = false
     private var junkTask: Task<[JunkCategory], Never>?
     private var analysisCancelled = false
+
+    // Depolama dökümü
+    @Published private(set) var storage: StorageReport?
+    @Published private(set) var isLoadingStorage = false
 
     // Geçmiş ve hariç tutulanlar
     @Published private(set) var history: [HistoryRecord] = []
@@ -292,6 +298,7 @@ final class AppState: ObservableObject {
         analysisStep = "Tekrarlanan dosyalar karşılaştırılıyor…"
         await findDuplicates()
         guard !analysisCancelled else { return }
+        await loadStorage()
         lastAnalysis = Date()
         refreshDisk()
     }
@@ -389,6 +396,28 @@ final class AppState: ObservableObject {
             return "korunacak kopya artık yok, bu dosya son kopya olabilir"
         }
         return nil
+    }
+
+    // MARK: - Depolama dökümü
+
+    func loadStorage() async {
+        guard !isLoadingStorage else { return }
+        isLoadingStorage = true
+        storage = await Task.detached(priority: .userInitiated) { StorageInspector.load() }.value
+        isLoadingStorage = false
+    }
+
+    func deleteSnapshots(_ snapshots: [LocalSnapshot]) async {
+        let errors = await Task.detached(priority: .userInitiated) {
+            snapshots.compactMap { StorageInspector.delete($0) }
+        }.value
+        if errors.isEmpty {
+            showToast("\(snapshots.count) anlık görüntü silindi.")
+        } else {
+            showToast("Bazı anlık görüntüler silinemedi: \(errors[0])", isError: true)
+        }
+        await loadStorage()
+        refreshDisk()
     }
 
     // MARK: - Geçmiş

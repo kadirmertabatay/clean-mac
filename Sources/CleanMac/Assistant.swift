@@ -142,8 +142,14 @@ extension AppState {
             recs.append(.init(id: "hidden", level: .info, icon: "eye.slash",
                               title: "\(hidden.formattedBytes) taramada görünmüyor",
                               detail: "Bu alan genellikle Time Machine yerel anlık görüntüleri, macOS'un temizlenebilir (purgeable) verileri, sistem birimleri ya da izin olmadığı için okunamayan klasörlerdir (\(lastScan?.unreadable ?? 0) klasör okunamadı). Tam Disk Erişimi vermek ve `tmutil listlocalsnapshots /` komutuna bakmak yardımcı olur.",
-                              size: hidden, action: hasFullDiskAccess ? .storageSettings : .fullDiskAccess,
-                              actionTitle: hasFullDiskAccess ? "Depolama Ayarları" : "Tam Disk Erişimi"))
+                              size: hidden, action: .open(.storage), actionTitle: "Dökümü Gör"))
+        }
+
+        if let s = storage, !s.snapshots.isEmpty {
+            recs.append(.init(id: "snapshots", level: .suggestion, icon: "clock.arrow.circlepath",
+                              title: "\(s.snapshots.count) yerel Time Machine anlık görüntüsü var",
+                              detail: "Bu anlık görüntüler taramada görünmeyen alan kaplar. Harici yedeklerin varsa güvenle silinebilirler.",
+                              action: .open(.storage), actionTitle: "İncele"))
         }
 
         if duplicatesReady, visibleDuplicateWaste >= 50_000_000 {

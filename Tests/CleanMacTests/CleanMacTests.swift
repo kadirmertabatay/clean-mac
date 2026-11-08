@@ -212,3 +212,25 @@ final class BenchmarkTests: XCTestCase {
         print("[bench] tekrar: \(groups.count) grup, kullanıcı alanında boşa ~\(waste.formattedBytes), \(String(format: "%.1f", Date().timeIntervalSince(start))) sn")
     }
 }
+
+final class StorageTests: XCTestCase {
+    func testParsesTimeMachineSnapshots() {
+        let text = """
+        Snapshots for disk /:
+        com.apple.TimeMachine.2026-11-07-093012.local
+        com.apple.TimeMachine.2026-11-08-101010.local
+        com.apple.os.update-ABC
+        """
+        let snaps = StorageInspector.parseSnapshots(text)
+        XCTAssertEqual(snaps.map(\.dateString), ["2026-11-08-101010", "2026-11-07-093012"])
+        XCTAssertNotNil(snaps.first?.date)
+    }
+
+    func testReadsStartupContainer() throws {
+        let out = Shell.run("/usr/sbin/diskutil", ["apfs", "list", "-plist"])
+        let report = try XCTUnwrap(StorageInspector.parseContainer(plist: Data(out.stdout.utf8)))
+        XCTAssertGreaterThan(report.capacity, 0)
+        XCTAssertTrue(report.volumes.contains { $0.role == "Data" })
+        for v in report.volumes { print("[storage] \(v.title): \(v.used.formattedBytes)") }
+    }
+}
