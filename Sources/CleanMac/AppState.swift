@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
-    case assistant, overview, storage, explorer, largeFiles, duplicates, junk, history, exclusions
+    case assistant, overview, storage, explorer, largeFiles, duplicates, junk, apps, history, exclusions
 
     var id: String { rawValue }
 
@@ -15,6 +15,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .largeFiles: "Büyük Dosyalar"
         case .duplicates: "Tekrarlanan Dosyalar"
         case .junk: "Gereksiz Dosyalar"
+        case .apps: "Uygulamalar"
         case .history: "Temizlik Geçmişi"
         case .exclusions: "Hariç Tutulanlar"
         }
@@ -29,6 +30,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .largeFiles: "doc.badge.arrow.up"
         case .duplicates: "doc.on.doc"
         case .junk: "trash"
+        case .apps: "square.grid.3x3"
         case .history: "clock.arrow.circlepath"
         case .exclusions: "lock.shield"
         }
@@ -96,6 +98,10 @@ final class AppState: ObservableObject {
     // Depolama dökümü
     @Published private(set) var storage: StorageReport?
     @Published private(set) var isLoadingStorage = false
+
+    // Uygulamalar
+    @Published private(set) var apps: [InstalledApp] = []
+    @Published private(set) var isLoadingApps = false
 
     // Geçmiş ve hariç tutulanlar
     @Published private(set) var history: [HistoryRecord] = []
@@ -299,6 +305,8 @@ final class AppState: ObservableObject {
         await findDuplicates()
         guard !analysisCancelled else { return }
         await loadStorage()
+        analysisStep = "Uygulamalar ölçülüyor…"
+        await loadApps()
         lastAnalysis = Date()
         refreshDisk()
     }
@@ -418,6 +426,35 @@ final class AppState: ObservableObject {
         }
         await loadStorage()
         refreshDisk()
+    }
+
+    // MARK: - Uygulamalar
+
+    func loadApps() async {
+        guard !isLoadingApps else { return }
+        isLoadingApps = true
+        apps = await Task.detached(priority: .userInitiated) { AppInventory.installedApps() }.value
+        isLoadingApps = false
+    }
+
+    /// Uygulamayı (açıksa kapatıp) seçili kalıntılarıyla birlikte Çöp Kutusu'na taşır.
+    func uninstall(_ app: InstalledApp, leftovers: [AppLeftover]) async {
+        guard !app.isApple else { return }
+        if let id = app.bundleID {
+            for running in NSRunningApplication.runningApplications(withBundleIdentifier: id) { running.terminate() }
+            for _ in 0..<20 where app.isRunning { try? await Task.sleep(for: .milliseconds(250)) }
+            if app.isRunning {
+                showToast("\(app.name) kapatılamadı; kapatıp tekrar dene.", isError: true)
+                return
+            }
+        }
+        let targets = [RemovalTarget(url: app.url, size: app.size)] + leftovers.map { RemovalTarget(url: $0.url, size: $0.size) }
+        let result = await remove(targets, permanently: false)
+        if result.succeeded.contains(app.url) {
+            apps.removeAll { $0.id == app.id }
+        } else {
+            showToast("\(app.name) taşınamadı: yönetici izni gerekiyor olabilir. Finder'dan Çöp Kutusu'na sürükleyebilirsin.", isError: true)
+        }
     }
 
     // MARK: - Geçmiş

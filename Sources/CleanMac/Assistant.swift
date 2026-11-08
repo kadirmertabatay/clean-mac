@@ -145,6 +145,17 @@ extension AppState {
                               size: hidden, action: .open(.storage), actionTitle: "Dökümü Gör"))
         }
 
+        let appCutoff = Date().addingTimeInterval(-Double(Self.staleDays) * 86_400)
+        let unusedApps = apps.filter { !$0.isApple && $0.lastUsed != nil && $0.lastUsedSort < appCutoff && $0.size > 50_000_000 }
+        if !unusedApps.isEmpty {
+            let total = unusedApps.reduce(Int64(0)) { $0 + $1.size }
+            let names = unusedApps.sorted { $0.size > $1.size }.prefix(3).map(\.name).joined(separator: ", ")
+            recs.append(.init(id: "apps", level: .suggestion, icon: "square.grid.3x3",
+                              title: "6+ aydır açılmayan \(unusedApps.count) uygulama: \(total.formattedBytes)",
+                              detail: "En büyükleri: \(names). Kalıntı dosyalarıyla birlikte kaldırabilirsin.",
+                              size: total, action: .open(.apps), actionTitle: "İncele"))
+        }
+
         if let s = storage, !s.snapshots.isEmpty {
             recs.append(.init(id: "snapshots", level: .suggestion, icon: "clock.arrow.circlepath",
                               title: "\(s.snapshots.count) yerel Time Machine anlık görüntüsü var",

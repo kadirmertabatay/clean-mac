@@ -234,3 +234,17 @@ final class StorageTests: XCTestCase {
         for v in report.volumes { print("[storage] \(v.title): \(v.used.formattedBytes)") }
     }
 }
+
+final class AppInventoryTests: XCTestCase {
+    func testListsInstalledAppsReadOnly() {
+        let apps = AppInventory.installedApps()
+        XCTAssertFalse(apps.isEmpty)
+        XCTAssertEqual(apps.map(\.size), apps.map(\.size).sorted(by: >))
+        for a in apps.prefix(5) {
+            print("[apps] \(a.name): \(a.size.formattedBytes), son açılma: \(a.lastUsed.map { "\($0)" } ?? "?")")
+        }
+        if let big = apps.first(where: { !$0.isApple }) {
+            for l in AppInventory.leftovers(for: big) { print("[apps]   kalıntı \(l.kind): \(l.url.lastPathComponent) \(l.size.formattedBytes)") }
+        }
+    }
+}
