@@ -32,6 +32,7 @@ final class SpaceMonitor {
 
     func check(_ state: AppState) {
         state.refreshDisk()
+        Task { await state.checkRules() }
         let d = UserDefaults.standard
         guard d.bool(forKey: Prefs.lowSpaceAlerts), let disk = state.disk else { return }
         let threshold = Double(d.integer(forKey: Prefs.lowSpaceThreshold)) / 100
@@ -43,6 +44,13 @@ final class SpaceMonitor {
         content.body = "Yalnızca \(disk.available.formattedBytes) (\(disk.freeFraction.formatted(.percent.precision(.fractionLength(0))))) boş alan kaldı. Temizlik önerileri için CleanMac'i aç."
         content.sound = .default
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "lowSpace", content: content, trigger: nil))
+    }
+
+    static func notify(title: String, body: String) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
     }
 
     nonisolated static func shouldAlert(freeFraction: Double, threshold: Double, lastAlert: Date?, now: Date = Date()) -> Bool {

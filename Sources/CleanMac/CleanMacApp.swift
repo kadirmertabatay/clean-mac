@@ -69,7 +69,7 @@ struct ContentView: View {
                     }
                 }
                 Section("Araçlar") {
-                    ForEach([AppSection.explorer, .largeFiles, .duplicates, .junk, .apps, .developer]) { s in
+                    ForEach([AppSection.explorer, .largeFiles, .duplicates, .junk, .apps, .developer, .rules]) { s in
                         Label(s.title, systemImage: s.icon)
                             .badge(badge(for: s))
                             .tag(s)
@@ -97,6 +97,7 @@ struct ContentView: View {
             case .junk: JunkView()
             case .apps: AppsView()
             case .developer: DeveloperView()
+            case .rules: RulesView()
             case .history: HistoryView()
             case .exclusions: ExclusionsView()
             }
@@ -121,6 +122,9 @@ struct ContentView: View {
             return total > 0 ? Text(total.formattedBytes) : nil
         case .duplicates where state.duplicatesReady:
             return state.duplicateGroups.isEmpty ? nil : Text("\(state.duplicateGroups.count)")
+        case .rules:
+            let pending = state.rules.filter { $0.pendingSize != nil }.count
+            return pending > 0 ? Text("\(pending)") : nil
         case .exclusions:
             return state.excludedPaths.isEmpty ? nil : Text("\(state.excludedPaths.count)")
         default:

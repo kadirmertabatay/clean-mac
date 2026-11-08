@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
-    case assistant, overview, storage, growth, explorer, largeFiles, duplicates, junk, apps, developer, history, exclusions
+    case assistant, overview, storage, growth, explorer, largeFiles, duplicates, junk, apps, developer, rules, history, exclusions
 
     var id: String { rawValue }
 
@@ -18,6 +18,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .junk: "Gereksiz Dosyalar"
         case .apps: "Uygulamalar"
         case .developer: "Geliştirici"
+        case .rules: "Otomatik Temizlik"
         case .history: "Temizlik Geçmişi"
         case .exclusions: "Hariç Tutulanlar"
         }
@@ -35,6 +36,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .junk: "trash"
         case .apps: "square.grid.3x3"
         case .developer: "hammer"
+        case .rules: "calendar.badge.clock"
         case .history: "clock.arrow.circlepath"
         case .exclusions: "lock.shield"
         }
@@ -113,6 +115,9 @@ final class AppState: ObservableObject {
     @Published private(set) var scanSnapshots: [ScanSnapshot] = []
     private let snapshotStore: SnapshotStore
 
+    // Otomatik temizlik kuralları
+    @Published private(set) var rules: [CleanupRule] = []
+
     // Geçmiş ve hariç tutulanlar
     @Published private(set) var history: [HistoryRecord] = []
     @Published private(set) var excludedPaths: [String]
@@ -133,6 +138,10 @@ final class AppState: ObservableObject {
         self.historyURL = historyURL
         snapshotStore = SnapshotStore(directory: historyURL.deletingLastPathComponent().appendingPathComponent("snapshots"))
         excludedPaths = UserDefaults.standard.stringArray(forKey: "excludedPaths") ?? []
+        if let data = UserDefaults.standard.data(forKey: "cleanupRules"),
+           let saved = try? JSONDecoder().decode([CleanupRule].self, from: data) {
+            rules = saved
+        }
         if let data = try? Data(contentsOf: historyURL),
            let records = try? JSONDecoder().decode([HistoryRecord].self, from: data) {
             history = records
@@ -471,6 +480,63 @@ final class AppState: ObservableObject {
             apps.removeAll { $0.id == app.id }
         } else {
             showToast("\(app.name) taşınamadı: yönetici izni gerekiyor olabilir. Finder'dan Çöp Kutusu'na sürükleyebilirsin.", isError: true)
+        }
+    }
+
+    // MARK: - Otomatik temizlik
+
+    func addRule(_ rule: CleanupRule) {
+        guard !rules.contains(where: { $0.kind == rule.kind }) else { return }
+        var r = rule
+        r.id = UUID()
+        r.createdAt = Date()
+        rules.append(r)
+        saveRules()
+    }
+
+    func updateRule(_ id: UUID, _ change: (inout CleanupRule) -> Void) {
+        guard let i = rules.firstIndex(where: { $0.id == id }) else { return }
+        change(&rules[i])
+        saveRules()
+    }
+
+    func deleteRule(_ id: UUID) {
+        rules.removeAll { $0.id == id }
+        saveRules()
+    }
+
+    private func saveRules() {
+        if let data = try? JSONEncoder().encode(rules) { UserDefaults.standard.set(data, forKey: "cleanupRules") }
+    }
+
+    func runRule(_ id: UUID, targets: [RemovalTarget]? = nil) async {
+        guard let rule = rules.first(where: { $0.id == id }) else { return }
+        let list: [RemovalTarget]
+        if let targets { list = targets } else { list = await Task.detached { RuleEngine.targets(for: rule) }.value }
+        if !list.isEmpty { await remove(list, permanently: RuleEngine.isPermanent(rule)) }
+        updateRule(id) {
+            $0.lastRun = Date()
+            $0.pendingSize = nil
+        }
+    }
+
+    /// Zamanı gelen kuralları işler: otomatikse uygular, değilse önizleme boyutunu hesaplayıp bildirim gönderir.
+    func checkRules() async {
+        for rule in rules where rule.isDue() {
+            if rule.autoApply {
+                await runRule(rule.id)
+                SpaceMonitor.notify(title: "Otomatik temizlik yapıldı", body: rule.title)
+            } else if rule.pendingSize == nil {
+                let targets = await Task.detached { RuleEngine.targets(for: rule) }.value
+                let size = targets.reduce(Int64(0)) { $0 + $1.size }
+                if targets.isEmpty {
+                    updateRule(rule.id) { $0.lastRun = Date() }
+                } else {
+                    updateRule(rule.id) { $0.pendingSize = size }
+                    SpaceMonitor.notify(title: "Temizlik onay bekliyor",
+                                        body: "\(rule.title): \(size.formattedBytes). Uygulamak için CleanMac › Otomatik Temizlik.")
+                }
+            }
         }
     }
 

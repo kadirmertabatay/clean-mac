@@ -327,3 +327,35 @@ final class MonitorTests: XCTestCase {
         XCTAssertTrue(SpaceMonitor.shouldAlert(freeFraction: 0.08, threshold: 0.10, lastAlert: now.addingTimeInterval(-90_000), now: now))
     }
 }
+
+final class RuleTests: XCTestCase {
+    func testDueScheduling() {
+        let created = Date(timeIntervalSinceNow: -8 * 86_400)
+        var rule = CleanupRule(kind: .junk("logs"), interval: .weekly, createdAt: created)
+        XCTAssertTrue(rule.isDue())
+        rule.lastRun = Date(timeIntervalSinceNow: -86_400)
+        XCTAssertFalse(rule.isDue())
+        rule.lastRun = nil
+        rule.enabled = false
+        XCTAssertFalse(rule.isDue())
+    }
+
+    func testInstallerRulePicksOnlyOldInstallers() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("CleanMacDL-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        for name in ["old.dmg", "new.dmg", "old.pdf"] { try Data(count: 5_000).write(to: dir.appendingPathComponent(name)) }
+        let rule = CleanupRule(kind: .installers(days: 30), interval: .weekly)
+        // "now" 60 gün ileri alınınca dosyalar eski sayılır; .pdf asla seçilmez.
+        let later = RuleEngine.targets(for: rule, downloads: dir, now: Date(timeIntervalSinceNow: 60 * 86_400))
+        XCTAssertEqual(Set(later.map(\.url.lastPathComponent)), ["old.dmg", "new.dmg"])
+        let today = RuleEngine.targets(for: rule, downloads: dir)
+        XCTAssertTrue(today.isEmpty)
+    }
+
+    func testRuleCodableRoundTrip() throws {
+        let rules = CleanupRule.presets
+        let decoded = try JSONDecoder().decode([CleanupRule].self, from: JSONEncoder().encode(rules))
+        XCTAssertEqual(decoded.map(\.kind), rules.map(\.kind))
+    }
+}
