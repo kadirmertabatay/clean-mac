@@ -4,7 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 swift build -c release
-[ -f Resources/AppIcon.icns ] || swift scripts/make-icon.swift Resources
+[ -f Resources/AppIcon.icns ] || swift scripts/make-icon.swift Resources/logo.png Resources
 
 APP="build/CleanMac.app"
 rm -rf "$APP"

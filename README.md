@@ -1,3 +1,5 @@
+<p align="center"><img src="Resources/AppIcon-1024.png" width="160" alt="CleanMac simgesi"></p>
+
 # CleanMac
 
 Mac'in depolama alanını analiz eden ve temiz tutmana yardım eden, tamamen yerel çalışan bir SwiftUI uygulaması. İnternete hiçbir veri gönderilmez.
@@ -74,7 +76,7 @@ Sources/CleanMac/
   Assistant.swift        Kural tabanlı öneri motoru + asistan ekranı
   HistoryView.swift      Temizlik geçmişi ve hariç tutulanlar ekranları
   *View.swift            Diğer ekranlar
-scripts/make-icon.swift  Uygulama simgesini üretir
+scripts/make-icon.swift  Resources/logo.png'den beyaz çerçeveli uygulama simgesini üretir
 ```
 
 ## Lisans

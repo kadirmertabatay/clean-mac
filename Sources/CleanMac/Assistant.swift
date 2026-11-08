@@ -240,12 +240,9 @@ struct AssistantView: View {
 
     private var hero: some View {
         HStack(alignment: .top, spacing: 18) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 34, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 64, height: 64)
-                .background(LinearGradient(colors: [.purple, .blue], startPoint: .topLeading, endPoint: .bottomTrailing),
-                            in: RoundedRectangle(cornerRadius: 16))
+            Image(nsImage: NSApp.applicationIconImage)
+                .resizable()
+                .frame(width: 76, height: 76)
             VStack(alignment: .leading, spacing: 8) {
                 Text("Merhaba! Ben depolama asistanın.").font(.title.bold())
                 Text("Mac'ini tarayıp neyin yer kapladığını bulurum, güvenle silinebilecekleri önerir ve tekrar eden dosyaları gösteririm. Her şey bu bilgisayarda çalışır; sen onaylamadan hiçbir dosya silinmez ve varsayılan olarak her şey Çöp Kutusu'na taşınır.")
