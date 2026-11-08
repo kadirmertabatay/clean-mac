@@ -5,12 +5,18 @@ import SwiftUI
 struct CleanMacApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var state = AppState()
+    @AppStorage(Prefs.menuBarEnabled) private var menuBarEnabled = true
+
+    init() {
+        Prefs.register()
+    }
 
     var body: some Scene {
-        WindowGroup("CleanMac") {
+        WindowGroup("CleanMac", id: "main") {
             ContentView()
                 .environmentObject(state)
                 .frame(minWidth: 1040, minHeight: 660)
+                .task { SpaceMonitor.shared.start(state: state) }
         }
         .windowToolbarStyle(.unified)
         .commands {
@@ -24,6 +30,17 @@ struct CleanMacApp: App {
                     .keyboardShortcut(".")
             }
         }
+
+        MenuBarExtra(isInserted: $menuBarEnabled) {
+            MenuBarContent(state: state)
+        } label: {
+            MenuBarLabel(state: state)
+        }
+        .menuBarExtraStyle(.window)
+
+        Settings {
+            SettingsView()
+        }
     }
 }
 
@@ -31,9 +48,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
+        if UserDefaults.standard.bool(forKey: Prefs.lowSpaceAlerts) { SpaceMonitor.requestPermission() }
     }
 
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+    /// Menü çubuğu simgesi açıkken pencere kapansa da uygulama çalışmaya devam eder.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        !UserDefaults.standard.bool(forKey: Prefs.menuBarEnabled)
+    }
 }
 
 struct ContentView: View {

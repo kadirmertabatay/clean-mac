@@ -317,3 +317,13 @@ final class GrowthTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(diff.totalDelta, 60_000_000)
     }
 }
+
+final class MonitorTests: XCTestCase {
+    func testLowSpaceAlertThrottling() {
+        let now = Date()
+        XCTAssertFalse(SpaceMonitor.shouldAlert(freeFraction: 0.30, threshold: 0.10, lastAlert: nil, now: now))
+        XCTAssertTrue(SpaceMonitor.shouldAlert(freeFraction: 0.08, threshold: 0.10, lastAlert: nil, now: now))
+        XCTAssertFalse(SpaceMonitor.shouldAlert(freeFraction: 0.08, threshold: 0.10, lastAlert: now.addingTimeInterval(-3_600), now: now))
+        XCTAssertTrue(SpaceMonitor.shouldAlert(freeFraction: 0.08, threshold: 0.10, lastAlert: now.addingTimeInterval(-90_000), now: now))
+    }
+}
