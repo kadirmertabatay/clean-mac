@@ -197,6 +197,7 @@ struct DeveloperView: View {
                             Text("Temizlikten sonra sanal diski küçültmek için Docker › Settings › Resources › Disk.")
                                 .font(.caption).foregroundStyle(.secondary)
                             Spacer()
+                            Button("Docker Sekmesi") { state.section = .docker }
                             Button("Temizle") { pending = .docker(all: false) }
                             Button("Tüm Kullanılmayan İmajlar", role: .destructive) { pending = .docker(all: true) }
                         }

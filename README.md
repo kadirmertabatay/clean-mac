@@ -18,6 +18,7 @@ Mac'in depolama alanını analiz eden ve temiz tutmana yardım eden, tamamen yer
 | **Benzer Fotoğraflar** | Seri çekimleri ve yeniden kaydedilmiş kopyaları Apple Vision görüntü parmak iziyle (yerelde) gruplar |
 | **Uygulamalar** | Uygulamaları Library'deki kalıntılarıyla birlikte kaldırır; son açılma tarihine göre kullanılmayanları gösterir |
 | **Geliştirici** | Homebrew temizliği, kullanılmayan Xcode simülatörleri, Docker (`system prune`), dokunulmamış projelerin `node_modules` / `.venv` klasörleri |
+| **Docker** | (Docker yüklüyse) İmaj, konteyner, birim ve derleme önbelleği listesi; etiketsiz, eski sürüm, kullanılmayan ve aynı imaja ait fazladan etiketleri bulur; seçerek siler; sanal diski TRIM ile küçültür |
 | **Otomatik Temizlik** | Zamanlanmış kurallar (ör. haftalık önbellek temizliği); varsayılan olarak önce önizleme ve bildirim, onayla uygulanır |
 | **Tekrarlanan Dosyalar** | Boyut → baş/son 64 KB özeti → tam SHA-256 ile birebir aynı dosyaları bulur. "Akıllı Seç" en eski kopyayı korur |
 | **Temizlik Geçmişi** | Kaldırılan her öğenin kaydı; Çöp Kutusu'nda duranlar tek tıkla eski yerine geri alınır |

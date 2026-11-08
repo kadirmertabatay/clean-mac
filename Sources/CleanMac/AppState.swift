@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
-    case assistant, overview, storage, growth, explorer, largeFiles, duplicates, photos, junk, apps, developer, rules, history, exclusions
+    case assistant, overview, storage, growth, explorer, largeFiles, duplicates, photos, junk, apps, developer, docker, rules, history, exclusions
 
     var id: String { rawValue }
 
@@ -19,6 +19,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .junk: "Gereksiz Dosyalar"
         case .apps: "Uygulamalar"
         case .developer: "Geliştirici"
+        case .docker: "Docker"
         case .rules: "Otomatik Temizlik"
         case .history: "Temizlik Geçmişi"
         case .exclusions: "Hariç Tutulanlar"
@@ -38,6 +39,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .junk: "trash"
         case .apps: "square.grid.3x3"
         case .developer: "hammer"
+        case .docker: "cube.box"
         case .rules: "calendar.badge.clock"
         case .history: "clock.arrow.circlepath"
         case .exclusions: "lock.shield"
@@ -125,6 +127,11 @@ final class AppState: ObservableObject {
     // Ne büyüdü? (en yenisi başta)
     @Published private(set) var scanSnapshots: [ScanSnapshot] = []
     private let snapshotStore: SnapshotStore
+
+    // Docker
+    @Published private(set) var dockerSnapshot: DockerService.Snapshot?
+    @Published private(set) var isLoadingDocker = false
+    static let dockerInstalled = DockerService.isInstalled
 
     // Otomatik temizlik kuralları
     @Published private(set) var rules: [CleanupRule] = []
@@ -548,6 +555,29 @@ final class AppState: ObservableObject {
         } else {
             showToast("\(app.name) taşınamadı: yönetici izni gerekiyor olabilir. Finder'dan Çöp Kutusu'na sürükleyebilirsin.", isError: true)
         }
+    }
+
+    // MARK: - Docker
+
+    func loadDocker() async {
+        guard !isLoadingDocker else { return }
+        isLoadingDocker = true
+        dockerSnapshot = await Task.detached(priority: .userInitiated) { DockerService.load() }.value
+        if let s = dockerSnapshot { dockerDataSize = s.diskImageSize }
+        isLoadingDocker = false
+    }
+
+    /// Docker Desktop'ı başlatır ve motor hazır olana kadar (en fazla ~2 dk) bekler.
+    func startDocker() async {
+        _ = await Task.detached { () -> Bool in
+            if let docker = DevTools.dockerPath, Shell.run(docker, ["desktop", "start"]).status == 0 { return true }
+            return Shell.run("/usr/bin/open", ["-a", "Docker"]).status == 0
+        }.value
+        for _ in 0..<40 {
+            if await Task.detached(operation: { DockerService.isRunning }).value { break }
+            try? await Task.sleep(for: .seconds(3))
+        }
+        await loadDocker()
     }
 
     // MARK: - Otomatik temizlik

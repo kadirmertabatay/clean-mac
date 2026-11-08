@@ -162,7 +162,7 @@ extension AppState {
                 recs.append(.init(id: "docker", level: .suggestion, icon: "cube.box",
                                   title: "Docker verisi \(data.formattedBytes) yer kaplıyor",
                                   detail: "\(docker.name) imajları, konteynerleri ve derleme önbelleği tek bir sanal diskte tutulur. Kullanılmayanları temizleyebilir ya da Docker'ı hiç kullanmıyorsan kaldırabilirsin.",
-                                  size: data, action: .open(.developer), actionTitle: "İncele"))
+                                  size: data, action: .open(.docker), actionTitle: "İncele"))
             }
         }
 
