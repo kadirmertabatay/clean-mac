@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-09
+
+### Fixed
+
+- Build failure with Swift 6.0/6.1 (Xcode 16), which broke the 1.0.0 CI and release builds.
+
 ## [1.0.0] - 2026-11-09
 
 First public release.
@@ -30,5 +36,6 @@ First public release.
 - English interface with a Turkish translation, selectable in Settings.
 - Documentation (`docs/`), a screenshot generation script and universal (arm64 + x86_64) release packaging.
 
-[Unreleased]: https://github.com/kadirmertabatay/clean-mac/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/kadirmertabatay/clean-mac/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/kadirmertabatay/clean-mac/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/kadirmertabatay/clean-mac/releases/tag/v1.0.0

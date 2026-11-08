@@ -38,7 +38,7 @@ enum DockerService {
         let links: Int
         let isAnonymous: Bool
         var id: String { name }
-        var displayName: String { isAnonymous ? L("anonymous \(name.prefix(12))…") : name }
+        var displayName: String { isAnonymous ? L("anonymous \(String(name.prefix(12)))…") : name }
     }
 
     struct CacheEntry: Identifiable, Hashable {
