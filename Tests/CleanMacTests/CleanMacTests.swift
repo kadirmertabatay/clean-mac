@@ -280,3 +280,40 @@ final class DevToolsTests: XCTestCase {
         if let d = DevTools.dockerReport() { print("[dev] docker çalışıyor: \(d.running), sanal disk: \(d.diskImageSize.formattedBytes)") }
     }
 }
+
+final class GrowthTests: XCTestCase {
+    func testDiffFindsGrowthNewFilesAndShrink() {
+        let old = ScanSnapshot(root: "/r", date: Date(timeIntervalSinceNow: -86_400), total: 1_000_000_000,
+                               dirs: ["/r/a": 500_000_000, "/r/b": 300_000_000, "/r/c": 20_000_000],
+                               bigFiles: ["/r/a/old.mov": 200_000_000])
+        let new = ScanSnapshot(root: "/r", date: Date(), total: 1_400_000_000,
+                               dirs: ["/r/a": 900_000_000, "/r/b": 100_000_000, "/r/c": 30_000_000, "/r/d": 80_000_000],
+                               bigFiles: ["/r/a/old.mov": 200_000_000, "/r/a/new.mov": 400_000_000])
+        let d = GrowthDiff.compute(old: old, new: new)
+        XCTAssertEqual(d.totalDelta, 400_000_000)
+        XCTAssertEqual(d.grown.map(\.path), ["/r/a", "/r/d"], "10 MB'lık değişim gürültü sayılmalı")
+        XCTAssertEqual(d.shrunk.map(\.path), ["/r/b"])
+        XCTAssertEqual(d.newFiles.map(\.path), ["/r/a/new.mov"])
+        XCTAssertTrue(d.goneFiles.isEmpty)
+    }
+
+    @MainActor
+    func testScanStoresSnapshotsPerRoot() async throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("CleanMacGrowth-\(UUID().uuidString)")
+        let data = dir.appendingPathComponent("data/sub")
+        try FileManager.default.createDirectory(at: data, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try Data(count: 12_000_000).write(to: data.appendingPathComponent("a.bin"))
+
+        let state = AppState(historyURL: dir.appendingPathComponent("support/history.json"))
+        state.scanRoot = dir.appendingPathComponent("data")
+        await state.scan()
+        try Data(count: 70_000_000).write(to: data.appendingPathComponent("b.bin"))
+        await state.scan()
+
+        XCTAssertEqual(state.scanSnapshots.count, 2)
+        let diff = GrowthDiff.compute(old: state.scanSnapshots[1], new: state.scanSnapshots[0])
+        XCTAssertEqual(diff.grown.first?.url.lastPathComponent, "sub")
+        XCTAssertGreaterThanOrEqual(diff.totalDelta, 60_000_000)
+    }
+}

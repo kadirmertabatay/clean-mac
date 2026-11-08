@@ -166,6 +166,16 @@ extension AppState {
             }
         }
 
+        if scanSnapshots.count >= 2 {
+            let diff = GrowthDiff.compute(old: scanSnapshots[1], new: scanSnapshots[0])
+            if diff.totalDelta >= 1_000_000_000, let top = diff.grown.first {
+                recs.append(.init(id: "growth", level: .info, icon: "chart.line.uptrend.xyaxis",
+                                  title: "Önceki taramadan beri \(diff.totalDelta.formattedBytes) büyüdü",
+                                  detail: "En çok büyüyen: \(top.url.abbreviatedPath) (+\(top.delta.formattedBytes)), \(diff.from.formatted(.relative(presentation: .named))) yapılan taramaya göre.",
+                                  size: diff.totalDelta, action: .open(.growth), actionTitle: "Karşılaştır"))
+            }
+        }
+
         if let s = storage, !s.snapshots.isEmpty {
             recs.append(.init(id: "snapshots", level: .suggestion, icon: "clock.arrow.circlepath",
                               title: "\(s.snapshots.count) yerel Time Machine anlık görüntüsü var",

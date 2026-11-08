@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
-    case assistant, overview, storage, explorer, largeFiles, duplicates, junk, apps, developer, history, exclusions
+    case assistant, overview, storage, growth, explorer, largeFiles, duplicates, junk, apps, developer, history, exclusions
 
     var id: String { rawValue }
 
@@ -11,6 +11,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .assistant: "Akıllı Asistan"
         case .overview: "Genel Bakış"
         case .storage: "Depolama Dökümü"
+        case .growth: "Ne Büyüdü?"
         case .explorer: "Klasör Gezgini"
         case .largeFiles: "Büyük Dosyalar"
         case .duplicates: "Tekrarlanan Dosyalar"
@@ -27,6 +28,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .assistant: "sparkles"
         case .overview: "internaldrive"
         case .storage: "chart.bar.doc.horizontal"
+        case .growth: "chart.line.uptrend.xyaxis"
         case .explorer: "folder"
         case .largeFiles: "doc.badge.arrow.up"
         case .duplicates: "doc.on.doc"
@@ -107,6 +109,10 @@ final class AppState: ObservableObject {
     /// Docker'ın sanal diskinin boyutu (Docker yüklüyse).
     @Published private(set) var dockerDataSize: Int64 = 0
 
+    // Ne büyüdü? (en yenisi başta)
+    @Published private(set) var scanSnapshots: [ScanSnapshot] = []
+    private let snapshotStore: SnapshotStore
+
     // Geçmiş ve hariç tutulanlar
     @Published private(set) var history: [HistoryRecord] = []
     @Published private(set) var excludedPaths: [String]
@@ -125,6 +131,7 @@ final class AppState: ObservableObject {
             scanRoot = Self.home
         }
         self.historyURL = historyURL
+        snapshotStore = SnapshotStore(directory: historyURL.deletingLastPathComponent().appendingPathComponent("snapshots"))
         excludedPaths = UserDefaults.standard.stringArray(forKey: "excludedPaths") ?? []
         if let data = try? Data(contentsOf: historyURL),
            let records = try? JSONDecoder().decode([HistoryRecord].self, from: data) {
@@ -244,6 +251,9 @@ final class AppState: ObservableObject {
         duplicatesReady = false
         lastScan = ScanSummary(root: root, totalFiles: result.totalFiles, unreadable: result.unreadable,
                                duration: result.duration, date: Date())
+        let snapshot = ScanSnapshot(tree: result.root, files: result.files)
+        snapshotStore.save(snapshot)
+        scanSnapshots = snapshotStore.load(root: root.path)
         refreshDisk()
         return true
     }
