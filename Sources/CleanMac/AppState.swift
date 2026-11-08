@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
-    case assistant, overview, storage, explorer, largeFiles, duplicates, junk, apps, history, exclusions
+    case assistant, overview, storage, explorer, largeFiles, duplicates, junk, apps, developer, history, exclusions
 
     var id: String { rawValue }
 
@@ -16,6 +16,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .duplicates: "Tekrarlanan Dosyalar"
         case .junk: "Gereksiz Dosyalar"
         case .apps: "Uygulamalar"
+        case .developer: "Geliştirici"
         case .history: "Temizlik Geçmişi"
         case .exclusions: "Hariç Tutulanlar"
         }
@@ -31,6 +32,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .duplicates: "doc.on.doc"
         case .junk: "trash"
         case .apps: "square.grid.3x3"
+        case .developer: "hammer"
         case .history: "clock.arrow.circlepath"
         case .exclusions: "lock.shield"
         }
@@ -102,6 +104,8 @@ final class AppState: ObservableObject {
     // Uygulamalar
     @Published private(set) var apps: [InstalledApp] = []
     @Published private(set) var isLoadingApps = false
+    /// Docker'ın sanal diskinin boyutu (Docker yüklüyse).
+    @Published private(set) var dockerDataSize: Int64 = 0
 
     // Geçmiş ve hariç tutulanlar
     @Published private(set) var history: [HistoryRecord] = []
@@ -434,6 +438,9 @@ final class AppState: ObservableObject {
         guard !isLoadingApps else { return }
         isLoadingApps = true
         apps = await Task.detached(priority: .userInitiated) { AppInventory.installedApps() }.value
+        if apps.contains(where: { $0.bundleID == "com.docker.docker" }) {
+            dockerDataSize = await Task.detached(priority: .utility) { DiskScanner.allocatedSize(of: DevTools.dockerDataURL) }.value
+        }
         isLoadingApps = false
     }
 

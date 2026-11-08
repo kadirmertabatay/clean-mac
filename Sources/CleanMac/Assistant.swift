@@ -110,7 +110,7 @@ extension AppState {
                 recs.append(.init(id: "dev", level: .suggestion, icon: "shippingbox.fill",
                                   title: "\(visibleDevArtifacts.count) proje bağımlılık klasörü: \(devArtifactTotal.formattedBytes)",
                                   detail: "node_modules, .venv, Pods gibi klasörler. Üzerinde çalışmadığın projelerinkini silebilirsin; gerektiğinde npm install / pip install ile geri gelir.",
-                                  size: devArtifactTotal, action: .open(.junk), actionTitle: "İncele"))
+                                  size: devArtifactTotal, action: .open(.developer), actionTitle: "İncele"))
             }
             let stale = staleLargeFiles
             if !stale.isEmpty {
@@ -154,6 +154,16 @@ extension AppState {
                               title: "6+ aydır açılmayan \(unusedApps.count) uygulama: \(total.formattedBytes)",
                               detail: "En büyükleri: \(names). Kalıntı dosyalarıyla birlikte kaldırabilirsin.",
                               size: total, action: .open(.apps), actionTitle: "İncele"))
+        }
+
+        if let docker = apps.first(where: { $0.bundleID == "com.docker.docker" }) {
+            let data = dockerDataSize
+            if data > 5_000_000_000 {
+                recs.append(.init(id: "docker", level: .suggestion, icon: "cube.box",
+                                  title: "Docker verisi \(data.formattedBytes) yer kaplıyor",
+                                  detail: "\(docker.name) imajları, konteynerleri ve derleme önbelleği tek bir sanal diskte tutulur. Kullanılmayanları temizleyebilir ya da Docker'ı hiç kullanmıyorsan kaldırabilirsin.",
+                                  size: data, action: .open(.developer), actionTitle: "İncele"))
+            }
         }
 
         if let s = storage, !s.snapshots.isEmpty {

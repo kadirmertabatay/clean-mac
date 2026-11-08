@@ -248,3 +248,35 @@ final class AppInventoryTests: XCTestCase {
         }
     }
 }
+
+final class DevToolsTests: XCTestCase {
+    func testParsesBrewDryRun() {
+        let text = """
+        Would remove: /opt/homebrew/Cellar/node/22.1.0 (2,000 files, 80MB)
+        Would remove: /Users/x/Library/Caches/Homebrew/downloads/abc--wget.bottle.tar.gz (1.2MB)
+        ==> This operation would free approximately 209.2MB of disk space.
+        """
+        let r = DevTools.parseBrew(text)
+        XCTAssertEqual(r.items.count, 2)
+        XCTAssertEqual(r.freeable, "209.2MB")
+    }
+
+    func testProjectLastActivityIgnoresDependencyFolder() throws {
+        let project = FileManager.default.temporaryDirectory.appendingPathComponent("CleanMacProj-\(UUID().uuidString)")
+        let deps = project.appendingPathComponent("node_modules")
+        try FileManager.default.createDirectory(at: deps, withIntermediateDirectories: true)
+        let pkg = project.appendingPathComponent("package.json")
+        try Data("{}".utf8).write(to: pkg)
+        let old = Date(timeIntervalSinceNow: -100 * 86_400)
+        try FileManager.default.setAttributes([.modificationDate: old], ofItemAtPath: pkg.path)
+        defer { try? FileManager.default.removeItem(at: project) }
+        let activity = try XCTUnwrap(DevTools.projectLastActivity(deps))
+        XCTAssertEqual(activity.timeIntervalSince1970, old.timeIntervalSince1970, accuracy: 1)
+    }
+
+    func testReadOnlyToolReports() {
+        if let b = DevTools.brewDryRun() { print("[dev] brew: \(b.items.count) öğe, \(b.freeable ?? "-")") }
+        print("[dev] simülatör: \(DevTools.unavailableSimulators().count)")
+        if let d = DevTools.dockerReport() { print("[dev] docker çalışıyor: \(d.running), sanal disk: \(d.diskImageSize.formattedBytes)") }
+    }
+}

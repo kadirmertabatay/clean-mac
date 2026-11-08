@@ -8,10 +8,17 @@ enum Shell {
         let stderr: String
     }
 
-    static func run(_ path: String, _ args: [String]) -> Output {
+    /// GUI uygulamalarının PATH'i kısıtlı olduğu için araçlar (brew, docker, xcrun) bu PATH ile çalıştırılır.
+    static let toolPath = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
+    static func run(_ path: String, _ args: [String], env: [String: String] = [:]) -> Output {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: path)
         p.arguments = args
+        var environment = ProcessInfo.processInfo.environment
+        environment["PATH"] = toolPath
+        environment.merge(env) { $1 }
+        p.environment = environment
         let out = Pipe(), err = Pipe()
         p.standardOutput = out
         p.standardError = err
