@@ -6,15 +6,15 @@ struct HistoryView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            PageHeader(title: "Temizlik Geçmişi",
-                       subtitle: "CleanMac ile kaldırılan her öğe. Çöp Kutusu'nda duranları tek tıkla eski yerine geri alabilirsin.") {
-                Button("Geçmişi Temizle") { confirmClear = true }
+            PageHeader(title: L("Cleanup History"),
+                       subtitle: L("Every item removed with CleanMac. Items still in the Trash can be put back with one click.")) {
+                Button(L("Clear History")) { confirmClear = true }
                     .disabled(state.history.isEmpty)
             }
             Divider()
             if state.history.isEmpty {
-                EmptyStateView(icon: "clock.arrow.circlepath", title: "Henüz temizlik yapılmadı",
-                               message: "Bir şey sildiğinde ya da Çöp Kutusu'na taşıdığında burada listelenir.")
+                EmptyStateView(icon: "clock.arrow.circlepath", title: L("No cleanups yet"),
+                               message: L("Items you delete or move to the Trash will be listed here."))
             } else {
                 List {
                     ForEach(groupedByDay, id: \.0) { day, records in
@@ -26,7 +26,7 @@ struct HistoryView: View {
                 Divider()
                 HStack {
                     let trashed = state.history.filter { !$0.isPermanent && !$0.restored }
-                    Text("\(state.history.count) kayıt · Çöp Kutusu'na taşınan \(trashed.reduce(Int64(0)) { $0 + $1.size }.formattedBytes)")
+                    Text(L("\(state.history.count) records · \(trashed.reduce(Int64(0)) { $0 + $1.size }.formattedBytes) moved to the Trash"))
                         .foregroundStyle(.secondary)
                     Spacer()
                 }
@@ -34,10 +34,10 @@ struct HistoryView: View {
                 .padding(.vertical, 10)
             }
         }
-        .confirmationDialog("Geçmiş temizlensin mi?", isPresented: $confirmClear) {
-            Button("Geçmişi Temizle", role: .destructive) { state.clearHistory() }
+        .confirmationDialog(L("Clear history?"), isPresented: $confirmClear) {
+            Button(L("Clear History"), role: .destructive) { state.clearHistory() }
         } message: {
-            Text("Yalnızca kayıtlar silinir; Çöp Kutusu'ndaki dosyalara dokunulmaz.")
+            Text(L("Only the records are deleted; files in the Trash aren’t touched."))
         }
     }
 
@@ -69,13 +69,13 @@ private struct HistoryRow: View {
             Text(record.size.formattedBytes).monospacedDigit().frame(width: 80, alignment: .trailing)
             Group {
                 if record.restored {
-                    Text("Geri alındı").foregroundStyle(.green)
+                    Text(L("Restored")).foregroundStyle(.green)
                 } else if record.isPermanent {
-                    Text("Kalıcı silindi").foregroundStyle(.secondary)
+                    Text(L("Deleted permanently")).foregroundStyle(.secondary)
                 } else if inTrash {
-                    Button("Geri Al") { state.restore(record) }
+                    Button(L("Restore")) { state.restore(record) }
                 } else {
-                    Text("Çöpten boşaltılmış").foregroundStyle(.secondary)
+                    Text(L("Emptied from the Trash")).foregroundStyle(.secondary)
                 }
             }
             .font(.callout)
@@ -90,17 +90,17 @@ struct ExclusionsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            PageHeader(title: "Hariç Tutulanlar",
-                       subtitle: "Buradaki klasör ve dosyalar asistan tarafından önerilmez, listelerde gösterilmez ve CleanMac tarafından asla silinmez.") {
+            PageHeader(title: L("Exclusions"),
+                       subtitle: L("Folders and files here are never suggested by the assistant, never shown in lists, and never deleted by CleanMac.")) {
                 Button {
                     state.chooseExclusion()
-                } label: { Label("Ekle…", systemImage: "plus") }
+                } label: { Label(L("Add…"), systemImage: "plus") }
             }
             Divider()
             if state.excludedPaths.isEmpty {
-                EmptyStateView(icon: "lock.shield", title: "Hariç tutulan bir şey yok",
-                               message: "Aktif projelerini, önemli arşivlerini ya da dokunulmasını istemediğin klasörleri ekle. Listelerde sağ tıklayıp \"Hariç Tut\" diyerek de ekleyebilirsin.",
-                               actionTitle: "Klasör Ekle") { state.chooseExclusion() }
+                EmptyStateView(icon: "lock.shield", title: L("Nothing is excluded"),
+                               message: L("Add your active projects, important archives, or any folder you don’t want touched. You can also right-click in a list and choose \"Exclude\"."),
+                               actionTitle: L("Add Folder")) { state.chooseExclusion() }
             } else {
                 List {
                     ForEach(state.excludedPaths, id: \.self) { path in
@@ -112,13 +112,13 @@ struct ExclusionsView: View {
                             }
                             Spacer()
                             if !FileManager.default.fileExists(atPath: path) {
-                                Text("bulunamadı").font(.caption).foregroundStyle(.orange)
+                                Text(L("not found")).font(.caption).foregroundStyle(.orange)
                             }
                             Button { Finder.reveal([URL(fileURLWithPath: path)]) } label: { Image(systemName: "magnifyingglass") }
                                 .buttonStyle(.borderless)
                             Button(role: .destructive) { state.removeExclusion(path) } label: { Image(systemName: "minus.circle") }
                                 .buttonStyle(.borderless)
-                                .help("Listeden çıkar")
+                                .help(L("Remove from list"))
                         }
                         .padding(.vertical, 2)
                     }

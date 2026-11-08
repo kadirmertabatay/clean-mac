@@ -1,78 +1,200 @@
-# CleanMac
+<p align="center">
+  <img src="Resources/AppIcon-1024.png" width="128" alt="CleanMac icon">
+</p>
 
-Mac'in depolama alanını analiz eden ve temiz tutmana yardım eden, tamamen yerel çalışan bir SwiftUI uygulaması. İnternete hiçbir veri gönderilmez.
+<h1 align="center">CleanMac</h1>
 
-## Özellikler
+<p align="center">
+  An open-source, <b>fully local</b> storage assistant for macOS that shows what is filling up<br>
+  your disk, explains it, and helps you clean up safely.
+</p>
 
-| Bölüm | Ne yapar |
+<p align="center">
+  <a href="https://github.com/kadirmertabatay/clean-mac/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/kadirmertabatay/clean-mac/ci.yml?branch=main&label=CI" alt="CI status"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
+  <img src="https://img.shields.io/badge/macOS-14%2B-black?logo=apple" alt="macOS 14+">
+  <img src="https://img.shields.io/badge/Swift-5.9%2B-F05138?logo=swift&logoColor=white" alt="Swift 5.9+">
+  <img src="https://img.shields.io/badge/UI-SwiftUI-0A84FF" alt="SwiftUI">
+  <img src="https://img.shields.io/badge/dependencies-none-brightgreen" alt="No dependencies">
+  <img src="https://img.shields.io/badge/languages-English%20%7C%20T%C3%BCrk%C3%A7e-lightgrey" alt="English and Turkish">
+</p>
+
+<p align="center">
+  <a href="#installation">Installation</a> ·
+  <a href="#features">Features</a> ·
+  <a href="#safety-principles">Safety</a> ·
+  <a href="docs/README.md">Documentation</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a>
+</p>
+
+<p align="center">
+  <img src="docs/images/assistant.png" width="900" alt="CleanMac Smart Assistant screen">
+</p>
+
+---
+
+## Why CleanMac?
+
+- **Privacy first.** The app makes no network requests: no analytics, no accounts, no cloud. Every scan and comparison runs on your Mac.
+- **Explains before it deletes.** Every suggestion says what is using space, why, how much, and what happens if you remove it.
+- **Reversible.** By default everything goes to the Trash and can be put back from Cleanup History with one click.
+- **You stay in control.** In Smart Cleanup you choose the apps and folders that must never be touched (e.g. "don't touch Chrome"), and those protections apply to every automated flow.
+- **Lightweight and native.** Pure SwiftUI, no third-party dependencies, and a parallel scanner that uses every core.
+- **English and Turkish.** Switch the interface language in Settings.
+
+## Features
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/smart-cleanup.png" alt="Smart Cleanup screen">
+      <p><b>Smart Cleanup.</b> First choose what must never be touched (Desktop, Chrome, project dependencies…), then get a single Safe / Balanced / Thorough plan. Items skipped because of a protection are listed separately.</p>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/treemap.png" alt="Folder Explorer treemap view">
+      <p><b>Folder Explorer.</b> Browse the size tree as a list with a donut chart, or as a treemap. Double-click to drill down; right-click to show in Finder or move to the Trash.</p>
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <img src="docs/images/duplicates.png" alt="Duplicate Files screen">
+      <p><b>Duplicate Files.</b> Finds byte-identical files with size → head/tail digest → full SHA-256. Smart Select keeps the oldest copy, and selecting every copy in a group is blocked.</p>
+    </td>
+    <td valign="top">
+      <img src="docs/images/large-files.png" alt="Large Files screen">
+      <p><b>Large Files.</b> Sort by size, kind, last use and location. Includes an "unused for 6+ months" filter and verified archiving to an external disk.</p>
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <img src="docs/images/junk.png" alt="Junk Files screen">
+      <p><b>Junk Files.</b> Caches, logs, Xcode data, package manager caches, installers, old downloads, iPhone backups and the Trash. Every category is labeled with a safety level.</p>
+    </td>
+    <td valign="top">
+      <img src="docs/images/growth.png" alt="What Grew? screen">
+      <p><b>What Grew?</b> A summary of every scan is kept. Shows folders that grew or shrank and large files that appeared or disappeared since an earlier scan.</p>
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <img src="docs/images/similar-photos.png" alt="Similar Photos screen">
+      <p><b>Similar Photos.</b> Groups burst shots and re-saved copies using Apple Vision image feature prints, entirely on device.</p>
+    </td>
+    <td valign="top">
+      <img src="docs/images/storage.png" alt="Storage Breakdown screen">
+      <p><b>Storage Breakdown.</b> APFS volumes, space macOS can purge on its own, local Time Machine snapshots, and the space the scan can't see.</p>
+    </td>
+  </tr>
+</table>
+
+And also:
+
+| | |
 |---|---|
-| **Akıllı Asistan** | Tek tıkla tam analiz (gereksiz dosyalar → klasör taraması → tekrarlar) yapar ve öncelik sırasına göre öneriler sunar: disk doluluğu, temizlenebilir önbellekler, uzun süredir kullanılmayan büyük dosyalar, tekrarlar, proje bağımlılıkları |
-| **Genel Bakış** | Disk doluluğu, özet kartlar, en büyük klasörler |
-| **Klasör Gezgini** | Seçilen klasörün boyut ağacı; çift tıkla içine gir, halka grafikle dağılımı gör, sağ tık ile Finder'da göster / çöpe taşı |
-| **Büyük Dosyalar** | Boyut, tür, son kullanım ve konuma göre sıralanabilen tablo; "6+ ay kullanılmayan" filtresi |
-| **Tekrarlanan Dosyalar** | Boyut → baş/son 64 KB özeti → tam SHA-256 ile birebir aynı dosyaları bulur. "Akıllı Seç" en eski kopyayı korur |
-| **Temizlik Geçmişi** | Kaldırılan her öğenin kaydı; Çöp Kutusu'nda duranlar tek tıkla eski yerine geri alınır |
-| **Hariç Tutulanlar** | Buraya eklenen klasör/dosyalar hiç önerilmez, listelerde gösterilmez ve asla silinmez (sağ tık › "Hariç Tut") |
-| **Gereksiz Dosyalar** | Önbellekler, loglar, Xcode DerivedData / DeviceSupport / Archives, npm-pnpm-Gradle-Cargo-Bun-Go önbellekleri, `~/.cache`, İndirilenler'deki kurulum dosyaları, eski indirmeler, iPhone yedekleri, Çöp Kutusu, `node_modules` / `.venv` / `Pods` klasörleri |
+| **Smart Assistant** | Runs a full analysis with one click and lists suggestions by priority. |
+| **Apps** | Uninstalls apps together with the files they left in `~/Library`, and shows apps you haven't opened in a long time. |
+| **Developer** | Homebrew cleanup, unused Xcode simulators, and `node_modules` / `.venv` folders of untouched projects. |
+| **Docker** | Appears when Docker is installed. Lists images, containers, volumes and the build cache. Finds untagged, outdated, unused and redundant tags, and shrinks the virtual disk. |
+| **Auto Cleanup** | Scheduled rules (e.g. clean app caches weekly). By default a rule prepares a preview and a notification first and needs your approval. |
+| **Menu bar** | Shows free space in the menu bar and notifies you when it drops below your threshold. |
+| **History and Exclusions** | A record of every removed item with restore. Excluded items are never suggested and never deleted. |
 
-## Tarama kapsamı
+Every screen is described in detail in **[docs/features.md](docs/features.md)**.
 
-Asistan ekranındaki ya da Klasör Gezgini'ndeki **Kapsam** menüsünden seçilir (seçim hatırlanır):
+## Installation
 
-- **Ana Klasör (~)**: yalnızca kullanıcı dosyaların (en hızlısı)
-- **Tüm Mac (/)**: başlangıç diskinin tamamı. Harici diskler (`/Volumes`), `/System/Volumes` ve diski ikinci kez gösteren sanal yollar (`/.nofollow`, `/.resolve`, `/.vol`) atlanır. Taramanın göremediği alan (yerel Time Machine anlık görüntüleri, temizlenebilir veriler, izin olmayan klasörler) asistanda ayrıca gösterilir.
-- **Farklı Klasör…**: herhangi bir klasör ya da harici disk
+### Download a release
 
-Tarayıcı, klasörleri ilk 4 seviyede işlere bölüp tüm çekirdeklere dağıtır.
+1. Download `CleanMac-<version>.zip` from the [Releases](https://github.com/kadirmertabatay/clean-mac/releases) page and unzip it.
+2. Move `CleanMac.app` to your **Applications** folder.
+3. The app is ad-hoc signed, not signed with an Apple Developer ID. If macOS warns you on first launch, **right-click the app › Open**. On macOS 15 and later, use **System Settings › Privacy & Security › Open Anyway**.
 
-## Güvenlik ilkeleri
+> You can verify the download against the SHA-256 in the release notes: `shasum -a 256 CleanMac-<version>.zip`
 
-- Hiçbir dosya onayın olmadan silinmez; her silme işleminden önce özet gösterilir.
-- Varsayılan olarak her şey **Çöp Kutusu'na taşınır** (geri alınabilir). Kalıcı silme yalnızca Gereksiz Dosyalar ekranındaki seçenekle ve Çöp Kutusu'nu boşaltırken yapılır.
-- `~/Library`, sistem klasörleri ve uygulama paketlerinin (`.app`, `.photoslibrary` …) içindeki dosyalar "korumalı" sayılır, büyük dosya ve tekrar listelerinde varsayılan olarak gizlenir.
-- Silmeden hemen önce her öğe yeniden doğrulanır: taramadan sonra değiştiyse, artık yoksa ya da hariç tutulanlardaysa atlanır.
-- Tekrarlarda bir gruptaki tüm kopyaları silmek engellenir; silme anında korunan kopyanın hâlâ var olduğu kontrol edilir. Sabit bağlantılar (hard link) kopya sayılmaz.
-- iCloud'da tutulup yerelde olmayan dosyalar okunmaz (indirme tetiklenmez).
-- Okunamayan konumlar "Temiz" değil "İzin yok" olarak gösterilir.
-- Listelerde boşluk tuşu ya da sağ tık › "Hızlı Bakış" ile dosyayı silmeden önce önizleyebilirsin.
+Releases are universal binaries for Apple silicon and Intel Macs.
 
-## Derleme ve çalıştırma
+### Build from source
 
-Gereksinim: macOS 14+, Xcode komut satırı araçları (Swift 5.9+).
+Requirements: macOS 14 Sonoma or later, and Xcode 15+ (or the Xcode Command Line Tools with Swift 5.9+).
 
 ```bash
-./build-app.sh            # build/CleanMac.app oluşturur
-./build-app.sh --install  # ayrıca /Applications içine kopyalar
+git clone https://github.com/kadirmertabatay/clean-mac.git
+cd clean-mac
+./build-app.sh            # build/CleanMac.app
 open build/CleanMac.app
+
+./build-app.sh --install  # also copies it to /Applications
 ```
 
-Geliştirme sırasında: `swift run` · Testler: `swift test`
+Use `swift run` while developing and `swift test` to run the tests. See [docs/development.md](docs/development.md) for details.
 
-İsteğe bağlı testler:
+## Usage
 
-```bash
-CLEANMAC_BENCH=1 swift test -c release --filter Benchmark   # ana klasörde salt okunur hız ölçümü
-```
+1. On the **Smart Assistant** screen, pick a **Scope**: *Home Folder (~)*, *Entire Mac (/)* or *Other Folder…*
+2. Click **Start Full Analysis**. Junk files, folder sizes, duplicates, the storage breakdown and apps are computed in one pass.
+3. Review the suggestions. Each row's button takes you to the relevant screen or, for "safe" categories only, cleans right away.
+4. For a single cleanup plan, open **Smart Cleanup**, choose your protections and approve the plan.
 
-`CLEANMAC_SCAN_ROOT=/bir/klasör` ortam değişkeni varsayılan tarama klasörünü değiştirir.
+To permanently protect a folder, right-click it in any list › **Exclude**.
 
-## İzinler
+To change the interface language, open **Settings (⌘,) › Language** and choose **English**, **Türkçe** or **System Default**, then restart the app.
 
-- İlk taramada macOS, Masaüstü / Belgeler / İndirilenler erişimi için izin isteyebilir.
-- Çöp Kutusu, Mail, iPhone yedekleri gibi konumları görmek için **Sistem Ayarları › Gizlilik ve Güvenlik › Tam Disk Erişimi** listesine CleanMac'i ekle (isteğe bağlı). Asistan bu izni yoksa hatırlatır.
-- Uygulama ad-hoc imzalıdır; yeniden derledikten sonra macOS izinleri tekrar sorabilir.
+## Safety principles
 
-## Proje yapısı
+CleanMac deletes files, so safety is at the center of its design:
 
-```
-Sources/CleanMac/
-  CleanMacApp.swift      Uygulama girişi, kenar çubuğu, menü komutları
-  AppState.swift         Merkezi durum: tarama, tekrar arama, temizlik, güvenli silme, geçmiş, hariç tutma
-  Scanner.swift          İş kuyruklu paralel klasör tarayıcı (boyut ağacı + büyük dosyalar)
-  DuplicateFinder.swift  SHA-256 ile tekrar bulma
-  JunkScanner.swift      Bilinen gereksiz dosya konumları
-  Assistant.swift        Kural tabanlı öneri motoru + asistan ekranı
-  HistoryView.swift      Temizlik geçmişi ve hariç tutulanlar ekranları
-  *View.swift            Diğer ekranlar
-scripts/make-icon.swift  Uygulama simgesini üretir
-```
+- **No deletion without confirmation.** Every action shows a summary and a confirmation dialog first.
+- **Trash by default.** Permanent deletion only happens when you explicitly choose it (and when emptying the Trash).
+- **Re-checked at the last moment.** Right before removal, every item is checked again. If it changed after the scan, no longer exists or has been excluded, it is skipped.
+- **Duplicates always keep a copy.** At removal time CleanMac verifies that the copy being kept still exists. Hard links are not counted as copies.
+- **Protected locations.** System folders and the contents of app bundles (`.app`, `.photoslibrary` …) are hidden from the large-file and duplicate lists by default.
+- **iCloud is left alone.** Cloud-only (not downloaded) files are never read, so no downloads are triggered.
+- **Honest status.** Locations that can't be read are shown as "No access", never as "All clean".
+
+See [docs/safety.md](docs/safety.md) for the design in detail. If you find a security issue, please follow [SECURITY.md](SECURITY.md).
+
+## Permissions
+
+| Permission | Why | Required? |
+|---|---|---|
+| Desktop / Documents / Downloads | To measure the size of these folders | macOS asks during the first scan |
+| Full Disk Access | To see protected locations such as the Trash, Mail and iPhone backups | Optional; the assistant reminds you if it's missing |
+| Notifications | To tell you when free space is low or an Auto Cleanup rule awaits approval | Optional |
+| Administrator password | Only when deleting local Time Machine snapshots | Asked at that moment |
+
+To grant Full Disk Access, add CleanMac under **System Settings › Privacy & Security › Full Disk Access**.
+
+## Documentation
+
+| Document | Contents |
+|---|---|
+| [Features](docs/features.md) | Every screen in detail, with screenshots |
+| [Safety and Privacy](docs/safety.md) | The removal flow, checks, protections and stored data |
+| [Architecture](docs/architecture.md) | Code layout, scanner design, concurrency model, localization |
+| [Development](docs/development.md) | Building, testing, environment variables, screenshots, translations, releasing |
+| [FAQ and Troubleshooting](docs/faq.md) | Common questions, permission issues, launch warnings |
+
+## Roadmap
+
+- [ ] Developer ID signing and notarization, so releases open without a Gatekeeper warning
+- [ ] Homebrew Cask (`brew install --cask cleanmac`)
+- [ ] More languages (translations are welcome, see [Translations](docs/development.md#translations))
+- [ ] More junk categories: Mail and Messages attachments, old iOS updates, browser caches per profile
+- [ ] Export a scan report (CSV / Markdown)
+- [ ] Optional scheduled background scans
+
+Have an idea? Open a [feature request](https://github.com/kadirmertabatay/clean-mac/issues/new/choose) or start a [discussion](https://github.com/kadirmertabatay/clean-mac/discussions).
+
+## Contributing
+
+Bug reports, ideas, translations and pull requests are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md) before you start. New pull requests target the `develop` branch; see the [branching model](CONTRIBUTING.md#branching-model). Release notes are in [CHANGELOG.md](CHANGELOG.md).
+
+Issues labeled [good first issue](https://github.com/kadirmertabatay/clean-mac/labels/good%20first%20issue) are a good place to start. For questions, see [SUPPORT.md](SUPPORT.md).
+
+## Support the project
+
+If CleanMac helped you free up space, consider giving the repository a ⭐. It helps other Mac users find it.
+
+## License
+
+CleanMac is released under the [MIT License](LICENSE). © 2026 Kadir Mert Abatay

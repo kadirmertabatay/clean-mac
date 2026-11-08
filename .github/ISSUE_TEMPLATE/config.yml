@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ask a question
+    url: https://github.com/kadirmertabatay/clean-mac/discussions
+    about: Questions, ideas and show-and-tell go to Discussions.
+  - name: Report a security vulnerability
+    url: https://github.com/kadirmertabatay/clean-mac/security/advisories/new
+    about: Please report security issues privately instead of opening a public issue.
+  - name: Documentation and FAQ
+    url: https://github.com/kadirmertabatay/clean-mac/blob/main/docs/faq.md
+    about: Frequently asked questions and troubleshooting.

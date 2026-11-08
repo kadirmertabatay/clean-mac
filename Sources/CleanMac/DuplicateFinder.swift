@@ -8,19 +8,19 @@ struct DuplicateGroup: Identifiable {
     var wasted: Int64 { size * Int64(max(files.count - 1, 0)) }
 }
 
-/// Aynı içeriğe sahip dosyaları bulur: boyut → baş/son 64 KB özeti → tam SHA-256.
+/// Finds files with identical content: size → first/last 64 KB digest → full SHA-256.
 enum DuplicateFinder {
     private static let chunk = 64 * 1024
 
     static func find(in entries: [FileEntry], minSize: Int64,
                      progress: @escaping (Double) -> Void) -> [DuplicateGroup] {
-        // Sabit bağlantıları (aynı inode) ayıkla ve gerçek bayt boyutuna göre grupla.
+        // Drop hard links (same inode) and group by actual byte size.
         var seenInodes = Set<String>()
         var bySize: [Int64: [FileEntry]] = [:]
         for e in entries where e.size >= minSize {
             var st = stat()
             guard lstat(e.url.path, &st) == 0, (st.st_mode & S_IFMT) == S_IFREG else { continue }
-            // Yalnızca bulutta duran dosyaları okumak indirmeyi tetikler; atla.
+            // Reading cloud-only files triggers a download; skip them.
             guard (st.st_flags & UInt32(SF_DATALESS)) == 0, st.st_blocks > 0 else { continue }
             guard seenInodes.insert("\(st.st_dev):\(st.st_ino)").inserted else { continue }
             bySize[Int64(st.st_size), default: []].append(e)
@@ -85,7 +85,7 @@ enum DuplicateFinder {
         var hasher = SHA256()
         while true {
             if Task.isCancelled { return nil }
-            // 1: veri okundu, 0: dosya sonu, -1: hata
+            // 1: data read, 0: end of file, -1: error
             let status: Int = autoreleasepool {
                 do {
                     guard let data = try h.read(upToCount: 4 << 20), !data.isEmpty else { return 0 }

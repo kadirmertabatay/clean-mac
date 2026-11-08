@@ -115,9 +115,9 @@ struct ScanningView: View {
     var body: some View {
         VStack(spacing: 14) {
             ProgressView().controlSize(.large)
-            Text("\(state.scanRoot.abbreviatedPath) taranıyor…").font(.title3.bold())
+            Text(L("Scanning \(state.scanRoot.abbreviatedPath)…")).font(.title3.bold())
             if let p = state.scanProgress {
-                Text("\(p.files.formatted()) dosya · \(p.bytes.formattedBytes)")
+                Text(L("\(p.files.formatted()) files · \(p.bytes.formattedBytes)"))
                     .monospacedDigit()
                 Text(URL(fileURLWithPath: p.currentPath).abbreviatedPath)
                     .font(.caption)
@@ -126,31 +126,31 @@ struct ScanningView: View {
                     .truncationMode(.middle)
                     .frame(maxWidth: 520)
             }
-            Button("Durdur") { state.cancelScan() }
+            Button(L("Stop")) { state.cancelScan() }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
-/// Tarama kapsamı seçici: ana klasör, tüm Mac ya da başka bir klasör.
+/// Scan scope picker: home folder, entire Mac or another folder.
 struct ScanScopeMenu: View {
     @EnvironmentObject var state: AppState
     var onChange: () -> Void = {}
 
     var body: some View {
         Menu {
-            Button { select(AppState.home) } label: { Label("Ana Klasör (~)", systemImage: "house") }
-            Button { select(AppState.wholeMac) } label: { Label("Tüm Mac (/)", systemImage: "internaldrive") }
+            Button { select(AppState.home) } label: { Label(L("Home Folder (~)"), systemImage: "house") }
+            Button { select(AppState.wholeMac) } label: { Label(L("Entire Mac (/)"), systemImage: "internaldrive") }
             Divider()
             Button {
                 if state.chooseScanRoot() { onChange() }
-            } label: { Label("Farklı Klasör…", systemImage: "folder") }
+            } label: { Label(L("Other Folder…"), systemImage: "folder") }
         } label: {
             Label(state.scanScopeTitle, systemImage: state.scanScopeIcon)
         }
         .fixedSize()
         .disabled(state.isScanning || state.isAnalyzing)
-        .help("Taranacak alan: \(state.scanRoot.path)")
+        .help(L("Area to scan: \(state.scanRoot.path)"))
     }
 
     private func select(_ url: URL) {

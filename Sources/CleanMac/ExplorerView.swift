@@ -7,14 +7,22 @@ struct ExplorerView: View {
     @State private var selection = Set<FileNode.ID>()
     @State private var pendingRemoval: [FileNode] = []
     @State private var previewURL: URL?
+    @AppStorage("explorerTreemap") private var treemapMode = false
 
     var body: some View {
         VStack(spacing: 0) {
-            PageHeader(title: "Klasör Gezgini", subtitle: subtitle) {
+            PageHeader(title: L("Folder Explorer"), subtitle: subtitle) {
+                Picker("", selection: $treemapMode) {
+                    Image(systemName: "list.bullet").help(L("List")).tag(false)
+                    Image(systemName: "square.grid.2x2").help("Treemap").tag(true)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
                 ScanScopeMenu { state.startScan() }
                 Button {
                     state.startScan()
-                } label: { Label(state.rootNode == nil ? "Tara" : "Yeniden Tara", systemImage: "arrow.clockwise") }
+                } label: { Label(state.rootNode == nil ? L("Scan") : L("Scan Again"), systemImage: "arrow.clockwise") }
                     .disabled(state.isScanning)
             }
             Divider()
@@ -23,36 +31,40 @@ struct ExplorerView: View {
             } else if let node = state.currentNode {
                 breadcrumb(node)
                 Divider()
-                HStack(spacing: 0) {
-                    list(node)
-                    Divider()
-                    DistributionChart(node: node).frame(width: 300)
+                if treemapMode {
+                    TreemapView(node: node) { pendingRemoval = [$0] }
+                } else {
+                    HStack(spacing: 0) {
+                        list(node)
+                        Divider()
+                        DistributionChart(node: node).frame(width: 300)
+                    }
                 }
             } else {
-                EmptyStateView(icon: "folder.badge.gearshape", title: "Henüz tarama yapılmadı",
-                               message: "Bir klasörü tarayarak hangi klasör ve dosyaların ne kadar yer kapladığını ağaç halinde görebilirsin.",
-                               actionTitle: "\(state.scanRoot.abbreviatedPath) Klasörünü Tara") { state.startScan() }
+                EmptyStateView(icon: "folder.badge.gearshape", title: L("No scan yet"),
+                               message: L("Scan a folder to see, as a tree, how much space each folder and file takes up."),
+                               actionTitle: L("Start Scan")) { state.startScan() }
             }
         }
-        .confirmationDialog("Seçilenler Çöp Kutusu'na taşınsın mı?",
+        .confirmationDialog(L("Move the selected items to the Trash?"),
                             isPresented: Binding(get: { !pendingRemoval.isEmpty }, set: { if !$0 { pendingRemoval = [] } })) {
-            Button("Çöp Kutusu'na Taşı", role: .destructive) {
+            Button(L("Move to Trash"), role: .destructive) {
                 let targets = pendingRemoval.map { RemovalTarget(url: $0.url, size: $0.size) }
                 pendingRemoval = []
                 selection = []
                 Task { await state.remove(targets, permanently: false) }
             }
-            Button("Vazgeç", role: .cancel) {}
+            Button(L("Cancel"), role: .cancel) {}
         } message: {
             let total = pendingRemoval.reduce(Int64(0)) { $0 + $1.size }
-            Text("\(pendingRemoval.count) öğe (\(total.formattedBytes)) Çöp Kutusu'na taşınacak. Gerekirse oradan geri alabilirsin.")
+            Text(L("\(pendingRemoval.count) items (\(total.formattedBytes)) will be moved to the Trash. You can restore them from there if needed."))
         }
     }
 
     private var subtitle: String {
-        guard let s = state.lastScan else { return "Klasörlerin ne kadar yer kapladığını keşfet" }
-        var text = "\(s.root.abbreviatedPath) · \(s.totalFiles.formatted()) dosya · \(String(format: "%.1f", s.duration)) sn"
-        if s.unreadable > 0 { text += " · \(s.unreadable) klasör okunamadı" }
+        guard let s = state.lastScan else { return L("Explore how much space your folders take up") }
+        var text = L("\(s.root.abbreviatedPath) · \(s.totalFiles.formatted()) files · \(String(format: "%.1f", s.duration)) s")
+        if s.unreadable > 0 { text += L(" · \(s.unreadable) folders couldn’t be read") }
         return text
     }
 
@@ -81,7 +93,7 @@ struct ExplorerView: View {
                     }
                 }
             }
-            Text("\(node.size.formattedBytes) · \(node.fileCount.formatted()) dosya")
+            Text(L("\(node.size.formattedBytes) · \(node.fileCount.formatted()) files"))
                 .foregroundStyle(.secondary)
                 .monospacedDigit()
         }
@@ -106,19 +118,19 @@ struct ExplorerView: View {
             let nodes = resolve(ids, in: node)
             if !nodes.isEmpty {
                 if nodes.count == 1, let n = nodes.first, n.canDrillDown {
-                    Button("Aç") { navigate(to: n) }
+                    Button(L("Open")) { navigate(to: n) }
                 }
-                if nodes.count == 1, let n = nodes.first { Button("Hızlı Bakış") { previewURL = n.url } }
-                Button("Finder'da Göster") { Finder.reveal(nodes.map(\.url)) }
-                Button("Yolu Kopyala") { Finder.copyPaths(nodes.map(\.url)) }
+                if nodes.count == 1, let n = nodes.first { Button(L("Quick Look")) { previewURL = n.url } }
+                Button(L("Show in Finder")) { Finder.reveal(nodes.map(\.url)) }
+                Button(L("Copy Path")) { Finder.copyPaths(nodes.map(\.url)) }
                 Divider()
                 if nodes.allSatisfy({ state.excludedPaths.contains($0.url.path) }) {
-                    Button("Hariç Tutmayı Kaldır") { nodes.forEach { state.removeExclusion($0.url.path) } }
+                    Button(L("Remove from Exclusions")) { nodes.forEach { state.removeExclusion($0.url.path) } }
                 } else {
-                    Button("Hariç Tut (önerme, silme)") { nodes.forEach { state.addExclusion($0.url) } }
+                    Button(L("Exclude (don’t suggest or delete)")) { nodes.forEach { state.addExclusion($0.url) } }
                 }
                 Divider()
-                Button("Çöp Kutusu'na Taşı…", role: .destructive) { pendingRemoval = nodes }
+                Button(L("Move to Trash…"), role: .destructive) { pendingRemoval = nodes }
             }
         } primaryAction: { ids in
             let nodes = resolve(ids, in: node)
@@ -158,11 +170,11 @@ private struct ExplorerRow: View {
                         .foregroundStyle(node.isAggregate ? .secondary : .primary)
                     if isExcluded {
                         Image(systemName: "lock.fill").font(.caption2).foregroundStyle(.secondary)
-                            .help("Hariç tutuluyor: önerilmez ve silinmez")
+                            .help(L("Excluded: never suggested or deleted"))
                     }
                 }
                 if node.isDirectory {
-                    Text("\(node.fileCount.formatted()) dosya").font(.caption).foregroundStyle(.secondary)
+                    Text(L("\(node.fileCount.formatted()) files")).font(.caption).foregroundStyle(.secondary)
                 }
             }
             Spacer(minLength: 12)
@@ -190,32 +202,32 @@ private struct DistributionChart: View {
         let items = node.children.filter { $0.size > 0 }
         var out = items.prefix(6).map { Slice(id: $0.name, size: $0.size) }
         let rest = items.dropFirst(6).reduce(Int64(0)) { $0 + $1.size }
-        if rest > 0 { out.append(Slice(id: "Diğer", size: rest)) }
+        if rest > 0 { out.append(Slice(id: L("Other"), size: rest)) }
         return out
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Dağılım").font(.headline)
+            Text(L("Distribution")).font(.headline)
             if slices.isEmpty {
-                Text("Bu klasör boş.").foregroundStyle(.secondary)
+                Text(L("This folder is empty.")).foregroundStyle(.secondary)
             } else {
                 Chart(slices) { s in
-                    SectorMark(angle: .value("Boyut", Double(s.size)), innerRadius: .ratio(0.58), angularInset: 1.5)
+                    SectorMark(angle: .value(L("Size"), Double(s.size)), innerRadius: .ratio(0.58), angularInset: 1.5)
                         .cornerRadius(3)
-                        .foregroundStyle(by: .value("Öğe", s.id))
+                        .foregroundStyle(by: .value(L("Item"), s.id))
                 }
                 .chartLegend(position: .bottom, alignment: .leading, spacing: 12)
                 .chartBackground { _ in
                     VStack(spacing: 2) {
                         Text(node.size.formattedBytes).font(.title3.bold())
-                        Text("toplam").font(.caption).foregroundStyle(.secondary)
+                        Text(L("total")).font(.caption).foregroundStyle(.secondary)
                     }
                 }
                 .frame(height: 340)
             }
             Spacer()
-            Text("İpucu: Klasöre çift tıklayarak içine gir, sağ tıkla Finder'da göster ya da Çöp Kutusu'na taşı.")
+            Text(L("Tip: double-click a folder to open it; right-click to show it in Finder or move it to the Trash."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
