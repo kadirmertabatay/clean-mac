@@ -1,101 +1,105 @@
-# SSS ve Sorun Giderme
+# FAQ and Troubleshooting
 
-## Kurulum ve açılış
+## Installing and launching
 
-### "CleanMac açılamıyor çünkü geliştiricisi doğrulanamıyor" uyarısı
+### "CleanMac can't be opened because the developer cannot be verified"
 
-Sürümler ad-hoc imzalıdır; Apple Developer ID ile imzalanmamış ve noterize edilmemiştir. Uygulamayı açmak için:
+Releases are ad-hoc signed; they are not signed with an Apple Developer ID and not notarized. To open the app:
 
-- **macOS 14:** Finder'da uygulamaya sağ tıkla › **Aç** › **Aç**.
-- **macOS 15 ve sonrası:** uygulamayı bir kez açmayı dene. Sonra **Sistem Ayarları › Gizlilik ve Güvenlik** bölümünde CleanMac için çıkan **Yine de Aç** düğmesine bas.
+- **macOS 14:** in Finder, right-click the app › **Open** › **Open**.
+- **macOS 15 and later:** try opening the app once, then click **Open Anyway** for CleanMac under **System Settings › Privacy & Security**.
 
-İkili dosyaya güvenmek istemiyorsan kaynaktan derleyebilirsin: `./build-app.sh`.
+If you'd rather not trust a binary, build from source: `./build-app.sh`.
 
-### Yeniden derledikten sonra izinler tekrar soruluyor
+### Permissions are requested again after rebuilding
 
-Ad-hoc imza her derlemede değişir ve macOS izinleri imzaya bağlar. **Sistem Ayarları › Gizlilik ve Güvenlik › Tam Disk Erişimi** listesinde eski CleanMac girdisini kaldırıp yenisini ekle.
+The ad-hoc signature changes with every build, and macOS ties permissions to the signature. Remove the old CleanMac entry from **System Settings › Privacy & Security › Full Disk Access** and add the new one.
 
-### Menü çubuğu simgesi var ama pencere yok
+### There's a menu bar item but no window
 
-Menü çubuğu açıkken ana pencereyi kapatmak uygulamayı kapatmaz. Simgeye tıklayıp **CleanMac'i Aç**'ı seç ya da Dock'taki simgeye tıkla. Pencere kapanınca uygulamanın da kapanmasını istiyorsan **Ayarlar › Menü çubuğu** seçeneğini kapat.
+While the menu bar item is enabled, closing the main window doesn't quit the app. Click the item and choose **Open CleanMac**, or click the Dock icon. If you want the app to quit when the window closes, turn off **Settings › Menu bar**.
 
-## Tarama
+### How do I switch the language?
 
-### Bazı klasörler "İzin yok" görünüyor
+Open **Settings (⌘,) › Language**, choose **English**, **Türkçe** or **System Default**, and click **Restart Now**. English is the default.
 
-macOS bazı konumları (Mail, Mesajlar, Safari, Çöp Kutusu, iPhone yedekleri…) yalnızca **Tam Disk Erişimi** verilmiş uygulamalara açar. CleanMac'i **Sistem Ayarları › Gizlilik ve Güvenlik › Tam Disk Erişimi** listesine ekleyip uygulamayı yeniden başlat. İzin vermezsen bu konumlar "Temiz" değil "İzin yok" olarak gösterilir. Uygulama boş bir sonucu yanlışlıkla "temiz" diye raporlamaz.
+## Scanning
 
-### Taranan toplam, diskteki "kullanılan" alandan az
+### Some folders show "No access"
 
-Bu normaldir. Taramanın göremediği alan şunlardan oluşabilir:
+macOS only opens some locations (Mail, Messages, Safari, the Trash, iPhone backups…) to apps with **Full Disk Access**. Add CleanMac under **System Settings › Privacy & Security › Full Disk Access** and restart the app. Without it, these locations are shown as "No access", never as "All clean". The app never reports an empty result as "clean" by mistake.
 
-- macOS sistem birimi ve Preboot / Kurtarma birimleri,
-- yerel Time Machine anlık görüntüleri,
-- macOS'un "temizlenebilir" olarak tuttuğu alan,
-- izin olmayan klasörler,
-- sanal bellek dosyaları.
+### The scanned total is less than the disk's "used" space
 
-**Depolama Dökümü** ekranı bu farkı birim birim açıklar. Tam resim için kapsamı **Tüm Mac (/)** yap.
+That's expected. The space the scan can't see may consist of:
 
-### Tüm Mac taraması harici diskimi taramıyor
+- the macOS system volume and the Preboot / Recovery volumes,
+- local Time Machine snapshots,
+- space macOS keeps as "purgeable",
+- folders without permission,
+- virtual memory files.
 
-Bilerek böyle. `/Volumes` atlanır ki harici diskler sayıma karışmasın ve istemeden dokunulmasın. Harici bir diski taramak için kapsamdan **Farklı Klasör…** seçip diski göster.
+The **Storage Breakdown** screen explains the difference volume by volume. For the full picture, set the scope to **Entire Mac (/)**.
 
-### Tarama yavaş
+### The Entire Mac scan doesn't include my external disk
 
-İlk tarama dosya sistemi önbelleği soğukken daha uzun sürer. Tarayıcı tüm çekirdekleri kullanır; bir SSD'de ana klasör genellikle saniyeler, tüm disk bir iki dakika içinde biter. Ağ diskleri ve çok sayıda küçük dosya içeren klasörler (ör. `node_modules`) süreyi uzatır.
+That's intentional. `/Volumes` is skipped so external disks don't mix into the totals and aren't touched unintentionally. To scan an external disk, choose **Other Folder…** from the scope menu and select the disk.
 
-### "Son kullanım" tarihi yanlış görünüyor
+### Scanning is slow
 
-Tarih macOS'un tuttuğu erişim tarihinden ve Spotlight'tan gelir. Bazı uygulamalar dosyaları açmadan okuyabilir ya da Spotlight bir klasörü dizinlemiyor olabilir. Eski görünen bir dosyayı silmeden önce **Hızlı Bakış** ile kontrol et.
+The first scan takes longer while the file system cache is cold. The scanner uses every core; on an SSD a home folder usually finishes in seconds and the whole disk within a minute or two. Network disks and folders with lots of small files (e.g. `node_modules`) take longer.
 
-## Temizlik
+### The "last used" date looks wrong
 
-### Yanlışlıkla bir şey sildim
+The date comes from the access date macOS keeps and from Spotlight. Some apps read files without "opening" them, or Spotlight may not be indexing a folder. Check a file that looks old with **Quick Look** before deleting it.
 
-Öğe Çöp Kutusu'na taşındıysa **Temizlik Geçmişi** ekranında **Geri Al**'a bas; öğe eski yerine döner. Çöp Kutusu boşaltıldıysa ya da kalıcı silme seçildiyse geri alınamaz. Bu durumda Time Machine yedeğinden geri yükleyebilirsin.
+## Cleaning up
 
-### Bazı öğeler "atlandı" diyor
+### I deleted something by mistake
 
-Silmeden hemen önce her öğe yeniden kontrol edilir. Bir öğe şu durumlarda atlanır:
+If the item was moved to the Trash, click **Restore** on the **Cleanup History** screen and it goes back to where it was. If the Trash has been emptied or permanent deletion was chosen, it can't be restored by CleanMac; you can restore it from a Time Machine backup.
 
-- taramadan sonra değiştirilmişse,
-- artık yoksa,
-- hariç tutulanlardaysa,
-- tekrarlarda korunacak kopya kaybolmuşsa.
+### Some items say "skipped"
 
-Atlanan öğelerin nedeni bildirimde yazar. Listeyi güncellemek için yeniden tara.
+Every item is checked again right before removal. An item is skipped when:
 
-### Önbellekleri temizledim ama boş alan değişmedi
+- it changed after the scan,
+- it no longer exists,
+- it is in the exclusions,
+- for duplicates, the copy to keep has disappeared.
 
-- Öğeler Çöp Kutusu'ndaysa alan, Çöp Kutusu boşaltılana kadar kullanılmaya devam eder.
-- Açık uygulamalar önbelleklerini hemen yeniden oluşturabilir.
-- macOS boş alanı (özellikle APFS anlık görüntüleri varken) birkaç dakika gecikmeyle günceller.
+The reason is shown in the notification. Scan again to refresh the list.
 
-### Önbellekleri silmek güvenli mi?
+### I cleaned caches but free space didn't change
 
-"Güvenli" etiketli kategoriler uygulamaların gerektiğinde yeniden oluşturduğu verilerdir. Silindikten sonra ilgili uygulama ilk açılışta biraz yavaş olabilir ya da bazı içerikleri yeniden indirebilir; veri kaybı olmaz. Bir uygulamanın önbelleğine hiç dokunulmasını istemiyorsan onu **Akıllı Silme**'de koru.
+- If the items are in the Trash, the space stays in use until the Trash is emptied.
+- Running apps may recreate their caches right away.
+- macOS can take a few minutes to update free space (especially when APFS snapshots exist).
 
-### Bir klasörün asla önerilmemesini istiyorum
+### Is deleting caches safe?
 
-Listede ona sağ tıkla › **Hariç Tut**. Hariç tutulanlar hiçbir listede gösterilmez, hiçbir otomatik akışa girmez ve silme sırasında son kontrolde de atlanır.
+Categories labeled "Safe" are data that apps recreate when needed. After they're deleted, the app may be a little slower on its next launch or download some content again; no data is lost. If you never want an app's cache touched, protect it in **Smart Cleanup**.
 
-## Gizlilik
+### I never want a folder to be suggested
 
-### CleanMac internete bağlanıyor mu?
+Right-click it in a list › **Exclude**. Excluded items never appear in any list, never go into any automated flow, and are skipped at the final check during removal.
 
-Hayır. Uygulama hiçbir ağ isteği yapmaz, analitik ya da çökme raporu göndermez. Bazı özellikler sistemdeki araçları çalıştırır (`brew`, `docker`, `xcrun simctl`, `tmutil`, `diskutil`). Bu araçların kendi davranışları kendi ayarlarına bağlıdır.
+## Privacy
 
-### Hangi verileri saklıyor?
+### Does CleanMac connect to the internet?
 
-Temizlik geçmişini, tarama özetlerini (klasör boyutları ve büyük dosyaların yolları) ve ayarları yalnızca senin Mac'inde saklar. Ayrıntılar ve hepsini silme komutu için bkz. [safety.md](safety.md#saklanan-veriler).
+No. The app makes no network requests and sends no analytics or crash reports. Some features run system tools (`brew`, `docker`, `xcrun simctl`, `tmutil`, `diskutil`); those tools behave according to their own settings.
 
-## Diğer
+### What data does it store?
 
-### Arayüz neden yalnızca Türkçe?
+The cleanup history, scan summaries (folder sizes and the paths of large files) and settings, only on your Mac. See [safety.md](safety.md#stored-data) for details and a command that deletes all of it.
 
-İlk sürüm Türkçe olarak geliştirildi. Başka dillere çeviri katkıları memnuniyetle karşılanır; bkz. [CONTRIBUTING.md](../CONTRIBUTING.md).
+## Other
 
-### Intel Mac'lerde çalışır mı?
+### Which languages are available?
 
-Evet. Hazır sürümler evrensel olarak (Apple Silicon ve Intel) derlenir; kaynaktan derlendiğinde de macOS 14 çalıştıran her Mac'te çalışır.
+English and Turkish. Translations are welcome; see [development.md](development.md#adding-a-language) and [CONTRIBUTING.md](../CONTRIBUTING.md).
+
+### Does it work on Intel Macs?
+
+Yes. Releases are universal binaries (Apple silicon and Intel), and building from source works on any Mac running macOS 14.

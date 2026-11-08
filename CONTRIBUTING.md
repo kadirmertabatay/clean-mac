@@ -1,20 +1,20 @@
-# Katkıda Bulunma Rehberi
+# Contributing
 
-CleanMac'e ilgin için teşekkürler! Hata bildirimleri, öneriler, çeviriler, belgeler ve kod katkıları memnuniyetle karşılanır.
+Thanks for your interest in CleanMac! Bug reports, ideas, translations, documentation and code contributions are all welcome.
 
-Katılarak [Davranış Kuralları](CODE_OF_CONDUCT.md)'na uymayı kabul etmiş olursun.
+By participating, you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
-## Nasıl yardım edebilirim?
+## How can I help?
 
-- **Hata bildir.** [Issues](https://github.com/kadirmertabatay/clean-mac/issues) sayfasında "Hata bildirimi" şablonunu kullan. macOS sürümünü, CleanMac sürümünü ve adımları yaz.
-- **Özellik öner.** "Özellik önerisi" şablonuyla neyi neden istediğini anlat.
-- **Çeviri yap.** Arayüz şu an Türkçe. Yerelleştirme altyapısı (String Catalog) ve İngilizce çeviri en çok istenen katkılardan.
-- **Belgeleri iyileştir.** `docs/` altındaki her şey düzenlenebilir.
-- **Kod yaz.** "good first issue" etiketli konular iyi bir başlangıç.
+- **Report a bug.** Use the "Bug report" template on the [Issues](https://github.com/kadirmertabatay/clean-mac/issues) page. Include your macOS version, CleanMac version and the steps to reproduce.
+- **Suggest a feature.** Use the "Feature request" template to explain what you want and why.
+- **Translate.** The interface is available in English and Turkish. New languages and better wording are very welcome; see [Translations](docs/development.md#translations).
+- **Improve the docs.** Everything under `docs/` can be edited.
+- **Write code.** Issues labeled "good first issue" are a good place to start.
 
-> **Güvenlik açıklarını herkese açık issue olarak bildirme.** Bunun için [SECURITY.md](SECURITY.md)'deki adımları izle.
+> **Please don't report security vulnerabilities as public issues.** Follow the steps in [SECURITY.md](SECURITY.md) instead.
 
-## Geliştirme ortamı
+## Development setup
 
 ```bash
 git clone https://github.com/kadirmertabatay/clean-mac.git
@@ -24,35 +24,36 @@ swift test
 ./build-app.sh && open build/CleanMac.app
 ```
 
-Ayrıntılar (ortam değişkenleri, demo klasörüyle izole çalıştırma, ekran görüntüleri) için: [docs/development.md](docs/development.md). Kodun nasıl düzenlendiği için: [docs/architecture.md](docs/architecture.md).
+See [docs/development.md](docs/development.md) for details (environment variables, running isolated with a demo folder, screenshots, translations), and [docs/architecture.md](docs/architecture.md) for how the code is organized.
 
-## Pull request süreci
+## Pull request process
 
-1. Büyük bir değişiklikten önce bir issue açıp yaklaşımı konuşalım; boşa emek harcanmasın.
-2. `main` dalından yeni bir dal aç: `git switch -c ozellik/kisa-aciklama`.
-3. Değişikliği küçük, odaklı commit'lerle yap. Commit mesajları İngilizce ve emir kipinde olsun: `Add …`, `Fix …`.
-4. Davranışı değiştiren her şey için test ekle ya da güncelle. `swift test` temiz geçmeli.
-5. Arayüzü değiştirdiysen PR açıklamasına ekran görüntüsü ekle. Gerekirse `./scripts/screenshots.sh` ile `docs/images`'ı yenile.
-6. Kullanıcıyı etkileyen değişiklikleri `CHANGELOG.md`'nin "Yayınlanmadı" bölümüne ekle.
-7. PR şablonundaki kontrol listesini doldur.
+1. Before a large change, open an issue so we can agree on the approach first.
+2. Create a branch from `main`: `git switch -c feature/short-description`.
+3. Make the change in small, focused commits. Write commit messages in English, in the imperative mood: `Add …`, `Fix …`.
+4. Add or update tests for anything that changes behavior. `swift test` must pass.
+5. If you add or change user-facing strings, run `./scripts/update-strings.sh` and add the Turkish translation (or mention in the PR that it's missing so someone can help).
+6. If you changed the UI, add a screenshot to the PR description. Regenerate `docs/images` with `./scripts/screenshots.sh` if needed.
+7. Add user-facing changes to the "Unreleased" section of `CHANGELOG.md`.
+8. Fill in the checklist in the PR template.
 
-## Kurallar
+## Rules
 
-Bir silme aracı geliştiriyoruz. Bu yüzden şu kurallar pazarlık konusu değil:
+CleanMac deletes files, so these rules are not negotiable:
 
-- **Tek silme yolu.** Dosya kaldıran her kod `AppState.remove(_:permanently:)` üzerinden geçmeli. Doğrudan `FileManager.removeItem` / `trashItem` çağırma.
-- **Varsayılan Çöp Kutusu.** Yeni bir özellik kalıcı silmeyi varsayılan yapamaz.
-- **Onay.** Kullanıcı arayüzünden tetiklenen her silme, ne kadar alanın ve kaç öğenin etkileneceğini gösteren bir onaydan geçmeli.
-- **Ağ yok.** Uygulamaya ağ isteği, analitik ya da üçüncü taraf bağımlılık ekleme. Böyle bir ihtiyaç varsa önce issue'da tartışalım.
-- **Testler kullanıcının dosyalarına dokunmaz.** Testler yalnızca geçici klasörlerde kendi oluşturdukları dosyalarla çalışmalı. Gerçek sistemle konuşan testler bir ortam değişkeniyle açılmalı (`CLEANMAC_…_TEST=1`).
+- **A single removal path.** Any code that removes files must go through `AppState.remove(_:permanently:)`. Don't call `FileManager.removeItem` / `trashItem` directly.
+- **Trash by default.** A new feature may not make permanent deletion the default.
+- **Confirmation.** Every deletion triggered from the UI must go through a confirmation that shows how many items and how much space are affected.
+- **No network.** Don't add network requests, analytics or third-party dependencies to the app. If you think one is needed, let's discuss it in an issue first.
+- **Tests never touch the user's files.** Tests must only work with files they create in temporary folders. Tests that talk to the real system must be enabled with an environment variable (`CLEANMAC_…_TEST=1`).
 
-## Kod stili
+## Code style
 
-- Swift API Tasarım Yönergeleri'ni izle. Mevcut kodun biçimine uy (4 boşluk girinti).
-- Tanımlayıcılar İngilizce, açıklama satırları ve arayüz metinleri Türkçe.
-- Arayüz metinleri kullanıcıya "sen" diye hitap eder, kısa ve teknik olmayan bir dil kullanır. Silme ile ilgili her metin sonucunu açıkça söylemeli ("Çöp Kutusu'na taşınır", "geri alınamaz").
-- Ağır işleri ana aktörde yapma. `Task.detached` kullan ve iptali destekle.
+- Follow the Swift API Design Guidelines and match the existing formatting (4-space indentation).
+- Identifiers, comments and source strings are in English; user-facing strings go through `L("…")` or a SwiftUI string literal.
+- Interface text addresses the user directly, is short and avoids jargon. Any text about deletion must state the outcome clearly ("moved to the Trash", "can't be undone").
+- Don't do heavy work on the main actor. Use `Task.detached` and support cancellation.
 
-## Lisans
+## License
 
-Katkıların projeyle aynı [MIT Lisansı](LICENSE) altında yayınlanır.
+Your contributions are released under the same [MIT License](LICENSE) as the project.

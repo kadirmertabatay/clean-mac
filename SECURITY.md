@@ -1,46 +1,46 @@
-# Güvenlik Politikası
+# Security Policy
 
-CleanMac dosya silen bir uygulama olduğu için güvenlik hatalarını ciddiye alıyoruz. Bu kapsamda en önemli hatalar, kullanıcının onaylamadığı ya da korumaya aldığı bir şeyin silinmesine yol açanlardır.
+CleanMac deletes files, so we take security bugs seriously. The most important bugs in this area are the ones that lead to something being deleted that the user didn't approve or had protected.
 
-## Desteklenen sürümler
+## Supported versions
 
-| Sürüm | Destek |
+| Version | Supported |
 |---|---|
-| En son yayınlanan sürüm | ✅ |
-| Daha eski sürümler | ❌ En son sürüme güncelle |
+| Latest release | ✅ |
+| Older releases | ❌ Please update to the latest release |
 
-## Bir açığı bildirme
+## Reporting a vulnerability
 
-**Lütfen güvenlik açıklarını herkese açık issue olarak bildirme.**
+**Please don't report security vulnerabilities as public issues.**
 
-GitHub'ın özel bildirim özelliğini kullan: depo sayfasında **Security › Report a vulnerability** ([doğrudan bağlantı](https://github.com/kadirmertabatay/clean-mac/security/advisories/new)).
+Use GitHub's private reporting instead: **Security › Report a vulnerability** on the repository page ([direct link](https://github.com/kadirmertabatay/clean-mac/security/advisories/new)).
 
-Bildirimine şunları eklersen çok yardımcı olur:
+It helps a lot if your report includes:
 
-- etkilenen sürüm ve macOS sürümü,
-- sorunu yeniden oluşturma adımları (mümkünse geçici bir klasörde, sahte dosyalarla),
-- beklenen ve gerçekleşen davranış,
-- olası etki (ör. "hariç tutulan bir klasör Akıllı Silme planına giriyor").
+- the affected version and macOS version,
+- steps to reproduce (ideally in a temporary folder with fake files),
+- the expected and actual behavior,
+- the possible impact (e.g. "an excluded folder ends up in the Smart Cleanup plan").
 
-## Süreç
+## Process
 
-- Bildirimin 7 gün içinde yanıtlanır.
-- Sorun doğrulanırsa düzeltme önceliklendirilir ve yeni bir sürümle yayınlanır.
-- İstersen sürüm notlarında adınla teşekkür edilir.
+- You'll get a reply within 7 days.
+- If the issue is confirmed, the fix is prioritized and shipped in a new release.
+- If you like, you'll be credited in the release notes.
 
-## Kapsam
+## Scope
 
-Şunlar güvenlik sorunu sayılır:
+These count as security issues:
 
-- onay penceresi olmadan bir şeyin silinmesi,
-- hariç tutulan ya da Akıllı Silme ile korunan bir yolun silinmesi veya bir plana girmesi,
-- tekrarlarda bir dosyanın son kopyasının silinmesi,
-- son an doğrulamasının (değişmiş ya da taşınmış dosya) atlatılabilmesi,
-- yönetici yetkisiyle çalışan komutlara dışarıdan girdi enjekte edilebilmesi,
-- uygulamanın ağ üzerinden veri göndermesine yol açan her şey.
+- something being deleted without a confirmation dialog,
+- an excluded path or a path protected by Smart Cleanup being deleted or ending up in a plan,
+- the last copy of a file being deleted from a duplicate group,
+- a way around the last-moment checks (changed or moved files),
+- outside input being injected into commands run with administrator privileges,
+- anything that makes the app send data over the network.
 
-Şunlar genellikle kapsam dışıdır:
+These are usually out of scope:
 
-- ad-hoc imzalı ve noterize edilmemiş sürümlerin macOS uyarıları (bilinen durum),
-- kullanıcının açıkça seçtiği kalıcı silme işlemleri,
-- macOS'un kendi araçlarındaki (`tmutil`, `diskutil`, `brew`, `docker`) sorunlar.
+- macOS warnings about ad-hoc signed, non-notarized releases (a known limitation),
+- permanent deletions the user explicitly chose,
+- issues in macOS's own tools (`tmutil`, `diskutil`) or in `brew` and `docker`.

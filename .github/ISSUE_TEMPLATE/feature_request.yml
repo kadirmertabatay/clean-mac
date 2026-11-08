@@ -1,26 +1,26 @@
-name: Özellik önerisi
-description: Yeni bir özellik ya da iyileştirme öner
+name: Feature request
+description: Suggest a new feature or an improvement
 labels: ["enhancement"]
 body:
   - type: textarea
     id: problem
     attributes:
-      label: Hangi sorunu çözüyor?
-      description: "Örn: Her ay Xcode'un yer kapladığını fark ediyorum ama hangi kısmın silinebileceğini bilmiyorum."
+      label: What problem does it solve?
+      description: "E.g.: Every month I notice Xcode taking up space, but I don't know which parts can be deleted."
     validations:
       required: true
   - type: textarea
     id: solution
     attributes:
-      label: Önerdiğin çözüm
+      label: Proposed solution
     validations:
       required: true
   - type: textarea
     id: safety
     attributes:
-      label: Güvenlik etkisi
-      description: Öneri bir şey siliyorsa, yanlışlıkla veri kaybını nasıl önleriz?
+      label: Safety impact
+      description: If the feature deletes something, how do we prevent accidental data loss?
   - type: textarea
     id: alternatives
     attributes:
-      label: Düşündüğün alternatifler
+      label: Alternatives you've considered

@@ -1,11 +1,11 @@
-# CleanMac Belgeleri
+# CleanMac Documentation
 
-| Belge | Kimler için | İçerik |
+| Document | For | Contents |
 |---|---|---|
-| [Özellikler](features.md) | Kullanıcılar | Her ekranın ne yaptığı, nasıl kullanılacağı, ekran görüntüleri |
-| [Güvenlik ve Gizlilik](safety.md) | Kullanıcılar, katkıda bulunanlar | Silme akışı, doğrulamalar, korumalar, saklanan veriler |
-| [SSS ve Sorun Giderme](faq.md) | Kullanıcılar | Açılış uyarıları, izinler, beklenmeyen sonuçlar |
-| [Mimari](architecture.md) | Katkıda bulunanlar | Kod yapısı, tarayıcı tasarımı, eşzamanlılık, veri akışı |
-| [Geliştirme](development.md) | Katkıda bulunanlar | Derleme, test, ortam değişkenleri, ekran görüntüleri, sürüm çıkarma |
+| [Features](features.md) | Users | What every screen does, how to use it, screenshots |
+| [Safety and Privacy](safety.md) | Users, contributors | Removal flow, checks, protections, stored data |
+| [FAQ and Troubleshooting](faq.md) | Users | Launch warnings, permissions, unexpected results |
+| [Architecture](architecture.md) | Contributors | Code layout, scanner design, concurrency, localization, data flow |
+| [Development](development.md) | Contributors | Building, testing, environment variables, translations, screenshots, releasing |
 
-Ekran görüntüleri [`images/`](images) klasöründedir ve `scripts/screenshots.sh` ile sahte bir demo klasöründen yeniden üretilir. Görüntülerde gerçek kullanıcı verisi yoktur.
+The screenshots are in the [`images/`](images) folder and are regenerated from a fake demo folder with `scripts/screenshots.sh`. They contain no real user data.

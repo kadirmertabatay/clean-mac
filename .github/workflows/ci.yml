@@ -17,11 +17,11 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
-      - name: Swift sürümü
+      - name: Swift version
         run: swift --version
-      - name: Derle
+      - name: Build
         run: swift build
       - name: Test
         run: swift test
-      - name: Uygulama paketi
+      - name: App bundle
         run: ./build-app.sh

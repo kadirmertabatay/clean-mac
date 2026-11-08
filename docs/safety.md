@@ -1,115 +1,117 @@
-# Güvenlik ve Gizlilik
+# Safety and Privacy
 
-CleanMac dosya silen bir uygulama. Bu belge hangi güvencelerin nerede uygulandığını, neyin saklandığını ve bilinen sınırları anlatır. Amaç, kullanıcının ve katkıda bulunanların uygulamanın neden güvenli olduğunu kodla birlikte doğrulayabilmesi.
+CleanMac deletes files. This document describes which safeguards are applied where, what is stored, and the known limitations, so that users and contributors can check against the code why the app is safe.
 
-## İlkeler
+## Principles
 
-1. **Onaysız silme yok.** Kullanıcı arayüzündeki her silme bir onay penceresinden geçer. Tek istisna, kullanıcının bir kural için açıkça "Onay istemeden uygula" seçmesidir.
-2. **Geri alınabilirlik varsayılandır.** Öğeler `FileManager.trashItem` ile Çöp Kutusu'na taşınır ve Çöp Kutusu'ndaki yerleri geçmişe kaydedilir.
-3. **Son anda yeniden doğrula.** Tarama ile silme arasında geçen sürede dünya değişmiş olabilir; her öğe silinmeden hemen önce yeniden kontrol edilir.
-4. **Şüphede atla.** Bir kontrol belirsiz kalırsa öğe silinmez, "atlandı" olarak raporlanır.
-5. **Ağ yok.** Uygulama hiçbir ağ isteği yapmaz ve hiçbir veri Mac'ten çıkmaz.
+1. **No deletion without confirmation.** Every deletion in the user interface goes through a confirmation dialog. The only exception is a rule for which the user explicitly chose "Apply without asking".
+2. **Reversible by default.** Items are moved to the Trash with `FileManager.trashItem`, and their location in the Trash is recorded in the history.
+3. **Re-check at the last moment.** The world may have changed between the scan and the removal, so every item is checked again right before it is removed.
+4. **When in doubt, skip.** If a check is inconclusive, the item is not deleted and is reported as "skipped".
+5. **No network.** The app makes no network requests and no data leaves the Mac.
 
-## Silme akışı
+## Removal flow
 
-Tüm silmeler tek bir yoldan geçer: `AppState.remove(_:permanently:)` ([AppState.swift](../Sources/CleanMac/AppState.swift)).
+Every removal goes through a single path: `AppState.remove(_:permanently:)` ([AppState.swift](../Sources/CleanMac/AppState.swift)).
 
 ```
-Ekran (onay penceresi)
-   └─► RemovalTarget listesi  (url, boyut, beklenen değiştirilme tarihi, korunacak kopyalar)
-         └─► her öğe için safetyProblem(...)  ── sorun varsa ──► atlandı + nedeni
-               └─► trashItem (varsayılan)  ya da  removeItem (yalnızca kalıcı seçildiyse)
-                     └─► HistoryRecord (orijinal yol, Çöp Kutusu yolu, boyut, tarih)
+Screen (confirmation dialog)
+   └─► list of RemovalTarget  (url, size, expected modification date, copies to keep)
+         └─► safetyProblem(...) for each item  ── problem ──► skipped + reason
+               └─► trashItem (default)  or  removeItem (only if permanent was chosen)
+                     └─► HistoryRecord (original path, Trash path, size, date)
 ```
 
-`safetyProblem` silmeden hemen önce şunları kontrol eder:
+`safetyProblem` checks the following right before removal:
 
-| Kontrol | Neyi önler |
+| Check | What it prevents |
 |---|---|
-| Yol **hariç tutulanlar** listesinde ya da onun altında mı? | Kullanıcının koruduğu bir şeyin herhangi bir akıştan silinmesi |
-| Öğe hâlâ var mı? (`lstat`, sembolik bağlantıyı takip etmeden) | Başka bir yere taşınmış ya da zaten silinmiş öğe için yanlış işlem |
-| Değiştirilme tarihi taramadakiyle aynı mı? | Taramadan sonra üzerinde çalışılmış bir dosyanın silinmesi |
-| (Tekrarlarda) korunacak kopyalardan en az biri hâlâ var mı? | Bir içeriğin **son** kopyasının silinmesi |
+| Is the path in the **exclusions** list or below it? | Something the user protected being deleted by any flow |
+| Does the item still exist? (`lstat`, without following symlinks) | Acting on an item that was moved or already deleted |
+| Is the modification date the same as at scan time? | Deleting a file that was worked on after the scan |
+| (Duplicates) Does at least one of the copies to keep still exist? | Deleting the **last** copy of some content |
 
-Akıllı Silme ve Otomatik Temizlik buna ek olarak plan hazırlanırken **Akıllı Silme korumalarını** uygular (`SmartPlanner.filter`, `AppState.isSmartProtected`).
+Smart Cleanup and Auto Cleanup additionally apply the **Smart Cleanup protections** while building the plan (`SmartPlanner.filter`, `AppState.isSmartProtected`).
 
-## Kalıcı silme ne zaman yapılır?
+## When is something deleted permanently?
 
-Yalnızca şu durumlarda:
+Only in these cases:
 
-- **"Gereksiz dosyaları kalıcı sil"** ayarı açıksa. Bu ayar Ayarlar'da ve Gereksiz Dosyalar ekranının altında aynı ayardır, varsayılan olarak kapalıdır. Açıkken şu durumlarda kalıcı silme yapılır:
-  - Gereksiz Dosyalar ekranından temizlenen öğeler,
-  - asistanın hızlı **Temizle** düğmesi (yalnızca "güvenli" kategorilerde),
-  - Akıllı Silme planındaki yeniden oluşturulabilir önbellek grupları.
-- **Çöp Kutusu** kategorisi temizlenirken, çünkü Çöp Kutusu'nu boşaltmak doğası gereği kalıcıdır.
+- When the **"Delete junk files permanently"** setting is on. It is the same setting in Settings and at the bottom of the Junk Files screen, and it is off by default. While it is on, permanent deletion applies to:
+  - items cleaned from the Junk Files screen,
+  - the assistant's quick **Clean** buttons (only for "safe" categories),
+  - the regenerable cache groups in a Smart Cleanup plan.
+- When cleaning the **Trash** category, because emptying the Trash is permanent by nature.
 
-Şunlar her zaman Çöp Kutusu'na gider:
-- tekrarlar,
-- büyük dosyalar,
-- uygulamalar ve kalıntıları,
-- arşivlenen dosyaların kaynakları,
-- Akıllı Silme'deki yeniden oluşturulamayan gruplar (kopyalar, proje bağımlılıkları, indirmeler).
+These always go to the Trash:
+- duplicates,
+- large files,
+- apps and their leftovers,
+- the sources of archived files,
+- the non-regenerable groups in Smart Cleanup (copies, project dependencies, downloads).
 
-## Tarama sırasında korumalar
+## Protections during scanning
 
-- **Korumalı konumlar:** şunlar "korumalı" işaretlenir:
-  - `/System`, `/usr`, `/bin`, `/sbin`, `/Library`, `/Applications`, `/opt`, `/etc`, `/private/var/db` ve `/private/var/vm`,
-  - yolunda bir `Library` klasörü geçen her şey (`~/Library` dahil),
-  - macOS'un paket saydığı klasörlerin içi (`.app`, `.photoslibrary` …). Bunlar büyük dosya ve tekrar listelerinde varsayılan olarak gizlenir; Akıllı Seç ve Akıllı Silme planı korumalı dosyaları seçmez.
-- **Atlanan yollar:** `/Volumes` (harici diskler), `/System/Volumes` ve diski ikinci kez gösteren sanal yollar (`/.nofollow`, `/.resolve`, `/.vol`, `/dev`, `/net` …) taranmaz. Böylece hem sayımlar ikiye katlanmaz hem de harici disklere istemeden dokunulmaz.
-- **Sembolik bağlantılar takip edilmez.** Boyut hesabında bağlantının kendisi sayılır.
-- **iCloud:** yalnızca bulutta duran (yerel kopyası olmayan) dosyalar okunmaz, böylece özet hesaplamak indirme tetiklemez.
-- **Sabit bağlantılar:** aynı inode'a işaret eden yollar tek dosya sayılır, birbirinin kopyası gibi gösterilmez.
+- **Protected locations:** the following are marked "protected":
+  - `/System`, `/usr`, `/bin`, `/sbin`, `/Library`, `/Applications`, `/opt`, `/etc`, `/private/var/db` and `/private/var/vm`,
+  - anything whose path contains a `Library` folder (including `~/Library`),
+  - the contents of folders macOS treats as packages (`.app`, `.photoslibrary` …).
 
-## Akıllı Silme korumaları
+  These are hidden from the large-file and duplicate lists by default; Smart Select and Smart Cleanup plans never select protected files.
+- **Skipped paths:** `/Volumes` (external disks), `/System/Volumes` and virtual paths that show the disk a second time (`/.nofollow`, `/.resolve`, `/.vol`, `/dev`, `/net` …) are not scanned. This keeps totals from being counted twice and keeps external disks from being touched unintentionally.
+- **Symbolic links are not followed.** The link itself is counted when measuring sizes.
+- **iCloud:** cloud-only files (with no local copy) are never read, so computing a digest never triggers a download.
+- **Hard links:** paths that point to the same inode are counted as one file and never shown as copies of each other.
 
-Kullanıcının seçtiği her koruma (kişisel alan, tarayıcı, uygulama, geliştirici alanı) bir yol ve anahtar kelime kümesine çevrilir. Bir öğe şu durumlarda korunur:
+## Smart Cleanup protections
 
-1. öğenin yolu korumayla eşleşiyorsa,
-2. öğe korunan bir yolu **içeriyorsa** (örneğin `~/Library/Caches/Google` içinde Chrome önbelleği var),
-3. öğenin doğrudan bir alt öğesi korumayla eşleşiyorsa.
+Every protection the user picks (personal area, browser, app, developer area) is turned into a set of paths and keywords. An item is protected when:
 
-2. ve 3. kurallar, bir üst klasör silinerek korumanın etrafından dolaşılmasını engeller. Korumalar `UserDefaults` içinde saklanır ve Akıllı Silme, Otomatik Temizlik ve asistanın hızlı temizleme düğmelerinde ortak olarak kullanılır.
+1. its path matches the protection,
+2. it **contains** a protected path (for example, `~/Library/Caches/Google` contains the Chrome cache),
+3. one of its direct children matches the protection.
 
-## Yönetici yetkisi
+Rules 2 and 3 keep a protection from being bypassed by deleting a parent folder. Protections are stored in `UserDefaults` and shared by Smart Cleanup, Auto Cleanup and the assistant's quick clean buttons.
 
-Uygulama yönetici yetkisi olmadan çalışır. Tek istisna, yerel Time Machine anlık görüntüsü silmektir (`tmutil deletelocalsnapshots`). Komut önce normal yetkiyle denenir, başarısız olursa macOS'un standart parola penceresiyle (`osascript … with administrator privileges`) yeniden çalıştırılır. Komuta yalnızca `tmutil`'in verdiği anlık görüntü tarihi eklenir.
+## Administrator privileges
 
-## Harici komutlar
+The app runs without administrator privileges. The only exception is deleting local Time Machine snapshots (`tmutil deletelocalsnapshots`). The command is tried with normal privileges first; if that fails, it is run again through macOS's standard password dialog (`osascript … with administrator privileges`). Only the snapshot date reported by `tmutil` is added to the command.
 
-Bazı özellikler sistemde yüklü araçları çalıştırır. Hepsi tam yolla ve argüman listesiyle çağrılır (kabuk yorumlaması yoktur):
+## External commands
 
-| Araç | Kullanım |
+Some features run tools installed on the system. They are all called by full path with an argument list (no shell interpretation):
+
+| Tool | Use |
 |---|---|
-| `diskutil`, `tmutil` | APFS birimleri, anlık görüntüler |
+| `diskutil`, `tmutil` | APFS volumes, snapshots |
 | `brew` | `cleanup --dry-run`, `cleanup` |
-| `xcrun simctl` | Kullanılmayan simülatörleri listeleme ve silme |
-| `docker` | Listeleme (`--format json`), `rm`, `rmi`, `volume rm`, `builder prune`, sanal disk TRIM |
+| `xcrun simctl` | Listing and deleting unused simulators |
+| `docker` | Listing (`--format json`), `rm`, `rmi`, `volume rm`, `builder prune`, virtual disk TRIM |
 
-Docker silmeleri `-f` kullanmaz; kullanımdaki imajlar ve bağlı birimler Docker tarafından reddedilir, çalışan konteynerler listeye hiç alınmaz.
+Docker deletions don't use `-f`: Docker refuses to remove images in use and attached volumes, and running containers are never listed for removal.
 
-## Saklanan veriler
+## Stored data
 
-Tüm veriler yerelde, kullanıcının hesabında tutulur:
+Everything is stored locally, in the user's account:
 
-| Ne | Nerede |
+| What | Where |
 |---|---|
-| Temizlik geçmişi | `~/Library/Application Support/CleanMac/history.json` |
-| Tarama özetleri ("Ne Büyüdü?") | `~/Library/Application Support/CleanMac/snapshots/` (kapsam başına son 12) |
-| Ayarlar, hariç tutulanlar, korumalar, kurallar | `UserDefaults` (`com.kadirmertabatay.cleanmac`) |
+| Cleanup history | `~/Library/Application Support/CleanMac/history.json` |
+| Scan summaries ("What Grew?") | `~/Library/Application Support/CleanMac/snapshots/` (last 12 per scope) |
+| Settings, exclusions, protections, rules, language | `UserDefaults` (`com.kadirmertabatay.cleanmac`) |
 
-Tarama özetleri yalnızca klasör boyutlarını ve büyük dosyaların yollarını içerir; dosya içeriği saklanmaz. Hepsini silmek için:
+Scan summaries only contain folder sizes and the paths of large files; no file contents are stored. To delete everything:
 
 ```bash
 rm -rf ~/Library/Application\ Support/CleanMac
 defaults delete com.kadirmertabatay.cleanmac
 ```
 
-## Bilinen sınırlar
+## Known limitations
 
-- Uygulama **sandbox'lı değildir**: diski analiz edebilmek için kullanıcının erişebildiği her yere erişir. macOS'un TCC izinleri (Masaüstü, Belgeler, Tam Disk Erişimi) yine geçerlidir.
-- İmza ad-hoc'tur ve uygulama noterize edilmemiştir. Kaynaktan derlemek, ikili dosyaya güvenmek zorunda kalmamanın en kesin yoludur.
-- "Son kullanım" tarihleri macOS'un tuttuğu erişim tarihlerine ve Spotlight'a dayanır. Bu tarihler her zaman güvenilir değildir; eski görünen bir dosyayı silmeden önce gözden geçir.
-- Kalıcı silinen öğeler geri alınamaz.
+- The app is **not sandboxed**: to analyze the disk it can access everything the user can. macOS TCC permissions (Desktop, Documents, Full Disk Access) still apply.
+- Releases are ad-hoc signed and not notarized. Building from source is the most reliable way to avoid having to trust a binary.
+- "Last used" dates rely on access dates kept by macOS and on Spotlight. These are not always reliable; review files that look old before deleting them.
+- Permanently deleted items can't be restored.
 
-Bir güvenlik sorunu bulduysan lütfen [SECURITY.md](../SECURITY.md) adımlarını izle.
+If you find a security issue, please follow the steps in [SECURITY.md](../SECURITY.md).

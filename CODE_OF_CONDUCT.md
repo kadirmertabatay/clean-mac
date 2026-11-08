@@ -1,31 +1,31 @@
-# Davranış Kuralları
+# Code of Conduct
 
-Bu proje [Contributor Covenant](https://www.contributor-covenant.org/version/2/1/code_of_conduct/) 2.1 sürümünü benimser. Aşağıdaki özet bağlayıcı metnin yerini tutmaz; tam metin için bağlantıya bak.
+This project adopts the [Contributor Covenant](https://www.contributor-covenant.org/version/2/1/code_of_conduct/), version 2.1. The summary below doesn't replace the full text; follow the link for the binding version.
 
-## Taahhüdümüz
+## Our pledge
 
-Katılımcılar ve sürdürücüler olarak, topluluğumuza katılımı yaş, beden yapısı, görünür ya da görünmez engellilik, etnik köken, cinsiyet özellikleri, cinsiyet kimliği ve ifadesi, deneyim düzeyi, eğitim, sosyo-ekonomik durum, milliyet, kişisel görünüm, ırk, din ya da cinsel kimlik ve yönelimden bağımsız olarak herkes için tacizden arınmış bir deneyim haline getirmeyi taahhüt ederiz.
+We as members, contributors and maintainers pledge to make participation in our community a harassment-free experience for everyone, regardless of age, body size, visible or invisible disability, ethnicity, sex characteristics, gender identity and expression, level of experience, education, socio-economic status, nationality, personal appearance, race, religion, or sexual identity and orientation.
 
-## Beklenen davranışlar
+## Expected behavior
 
-- Başkalarına karşı empati ve nezaket göstermek
-- Farklı görüşlere ve deneyimlere saygı duymak
-- Yapıcı eleştiri vermek ve nazikçe kabul etmek
-- Hatalarımızın sorumluluğunu almak, etkilenenlerden özür dilemek ve deneyimden ders çıkarmak
-- Yalnızca kendimiz için değil, topluluk için en iyisine odaklanmak
+- Showing empathy and kindness toward other people
+- Being respectful of differing opinions, viewpoints and experiences
+- Giving and gracefully accepting constructive feedback
+- Accepting responsibility, apologizing to those affected by our mistakes, and learning from the experience
+- Focusing on what is best not just for us as individuals, but for the community
 
-## Kabul edilemez davranışlar
+## Unacceptable behavior
 
-- Cinselleştirilmiş dil veya görseller, istenmeyen cinsel ilgi
-- Trollük, aşağılayıcı yorumlar, kişisel ya da siyasi saldırılar
-- Herkese açık ya da özel taciz
-- Başkalarının kişisel bilgilerini açık izinleri olmadan yayınlamak
-- Profesyonel bir ortamda makul olarak uygunsuz sayılabilecek diğer davranışlar
+- The use of sexualized language or imagery, and sexual attention or advances of any kind
+- Trolling, insulting or derogatory comments, and personal or political attacks
+- Public or private harassment
+- Publishing others' private information without their explicit permission
+- Other conduct which could reasonably be considered inappropriate in a professional setting
 
-## Uygulama
+## Enforcement
 
-Kabul edilemez davranışlar proje sürdürücüsüne GitHub üzerinden ([@kadirmertabatay](https://github.com/kadirmertabatay)) özel olarak bildirilebilir. Tüm şikayetler gözden geçirilir ve gizlilikle ele alınır. Sürdürücüler kurallara uymayan yorumları, commit'leri, kodu ve issue'ları kaldırma, düzenleme ya da reddetme hakkına sahiptir.
+Instances of unacceptable behavior may be reported privately to the project maintainer through GitHub ([@kadirmertabatay](https://github.com/kadirmertabatay)). All complaints will be reviewed and investigated promptly and confidentially. Maintainers have the right to remove, edit or reject comments, commits, code and issues that don't follow this Code of Conduct.
 
-## Kaynak
+## Attribution
 
-[Contributor Covenant](https://www.contributor-covenant.org) 2.1 sürümünden uyarlanmıştır.
+Adapted from the [Contributor Covenant](https://www.contributor-covenant.org), version 2.1.

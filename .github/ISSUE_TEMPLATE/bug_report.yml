@@ -1,51 +1,56 @@
-name: Hata bildirimi
-description: Beklendiği gibi çalışmayan bir şeyi bildir
+name: Bug report
+description: Report something that doesn't work as expected
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        Bildirdiğin için teşekkürler! **Güvenlik açıklarını burada değil, [özel olarak](https://github.com/kadirmertabatay/clean-mac/security/advisories/new) bildir.**
-        Ekran görüntüsü eklemeden önce kişisel dosya adlarını gizlemeyi unutma.
+        Thanks for reporting! **Please report security vulnerabilities [privately](https://github.com/kadirmertabatay/clean-mac/security/advisories/new), not here.**
+        Remember to hide personal file names before attaching screenshots.
   - type: textarea
     id: what
     attributes:
-      label: Ne oldu?
-      description: Gerçekleşen davranışı ve beklediğin davranışı yaz.
+      label: What happened?
+      description: Describe what happened and what you expected.
     validations:
       required: true
   - type: textarea
     id: steps
     attributes:
-      label: Yeniden oluşturma adımları
+      label: Steps to reproduce
       placeholder: |
-        1. Kapsam: Ana Klasör
-        2. Tam Analizi Başlat
+        1. Scope: Home Folder
+        2. Start Full Analysis
         3. …
     validations:
       required: true
   - type: input
     id: version
     attributes:
-      label: CleanMac sürümü
-      description: CleanMac › CleanMac Hakkında
+      label: CleanMac version
+      description: CleanMac › About CleanMac
       placeholder: 1.0.0
     validations:
       required: true
   - type: input
     id: macos
     attributes:
-      label: macOS sürümü ve Mac modeli
+      label: macOS version and Mac model
       placeholder: macOS 15.1, MacBook Air M2
     validations:
       required: true
   - type: dropdown
+    id: language
+    attributes:
+      label: Interface language
+      options: ["English", "Türkçe", "System Default"]
+  - type: dropdown
     id: fda
     attributes:
-      label: Tam Disk Erişimi verildi mi?
-      options: ["Evet", "Hayır", "Bilmiyorum"]
+      label: Is Full Disk Access granted?
+      options: ["Yes", "No", "Not sure"]
   - type: textarea
     id: extra
     attributes:
-      label: Ek bilgi
-      description: Ekran görüntüleri, Konsol günlükleri vb.
+      label: Additional information
+      description: Screenshots, Console logs, etc.

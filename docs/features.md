@@ -1,217 +1,222 @@
-# Özellikler
+# Features
 
-CleanMac'in kenar çubuğu üç bölümden oluşur: **Asistan** (ne yapmalıyım?), **Araçlar** (ayrıntıya in) ve **Güvenlik** (geri al, koru). Bu sayfa her ekranı sırayla anlatır.
+CleanMac's sidebar has three sections: **Assistant** (what should I do?), **Tools** (dig into the details) and **Safety** (undo and protect). This page walks through every screen.
 
-> Ekran görüntüleri `scripts/screenshots.sh` ile sahte bir demo ana klasöründen üretilmiştir.
+> The screenshots are generated from a fake demo home folder with `scripts/screenshots.sh`.
 
-- [Karşılama ekranı](#karşılama-ekranı)
-- Asistan: [Akıllı Asistan](#akıllı-asistan) · [Akıllı Silme](#akıllı-silme) · [Genel Bakış](#genel-bakış) · [Depolama Dökümü](#depolama-dökümü) · [Ne Büyüdü?](#ne-büyüdü)
-- Araçlar: [Klasör Gezgini](#klasör-gezgini) · [Büyük Dosyalar](#büyük-dosyalar) · [Tekrarlanan Dosyalar](#tekrarlanan-dosyalar) · [Benzer Fotoğraflar](#benzer-fotoğraflar) · [Gereksiz Dosyalar](#gereksiz-dosyalar) · [Uygulamalar](#uygulamalar) · [Geliştirici](#geliştirici) · [Docker](#docker) · [Otomatik Temizlik](#otomatik-temizlik)
-- Güvenlik: [Temizlik Geçmişi](#temizlik-geçmişi) · [Hariç Tutulanlar](#hariç-tutulanlar)
-- [Menü çubuğu ve Ayarlar](#menü-çubuğu-ve-ayarlar) · [Tarama kapsamı](#tarama-kapsamı) · [Klavye kısayolları](#klavye-kısayolları)
+- [Welcome screen](#welcome-screen)
+- Assistant: [Smart Assistant](#smart-assistant) · [Smart Cleanup](#smart-cleanup) · [Overview](#overview) · [Storage Breakdown](#storage-breakdown) · [What Grew?](#what-grew)
+- Tools: [Folder Explorer](#folder-explorer) · [Large Files](#large-files) · [Duplicate Files](#duplicate-files) · [Similar Photos](#similar-photos) · [Junk Files](#junk-files) · [Apps](#apps) · [Developer](#developer) · [Docker](#docker) · [Auto Cleanup](#auto-cleanup)
+- Safety: [Cleanup History](#cleanup-history) · [Exclusions](#exclusions)
+- [Menu bar and Settings](#menu-bar-and-settings) · [Language](#language) · [Scan scope](#scan-scope) · [Keyboard shortcuts](#keyboard-shortcuts)
 
 ---
 
-## Karşılama ekranı
+## Welcome screen
 
-<img src="images/splash.png" width="760" alt="Karşılama ekranı">
+<img src="images/splash.png" width="760" alt="Welcome screen">
 
-Uygulama açılırken bir kez gösterilir: logo, tarama halkası ve diskin anlık boş alanı. Tıklayınca hemen kapanır. **Ayarlar › Görünüm** bölümünden kapatılabilir. macOS'ta "Hareketi azalt" açıksa animasyonsuz gösterilir.
+Shown once at launch: the logo, a scan ring and the current free space on your disk. Click to dismiss it right away. You can turn it off in **Settings › Appearance**. If "Reduce motion" is on in macOS, it is shown without animation.
 
-## Akıllı Asistan
+## Smart Assistant
 
-<img src="images/assistant.png" width="760" alt="Akıllı Asistan">
+<img src="images/assistant.png" width="760" alt="Smart Assistant">
 
-Başlangıç ekranı. **Tam Analizi Başlat** sırasıyla şunları yapar:
+The start screen. **Start Full Analysis** does the following, in order:
 
-1. gereksiz dosya kategorilerini tarar,
-2. seçilen kapsamdaki klasör ağacını çıkarır,
-3. tekrarlanan dosyaları karşılaştırır,
-4. depolama dökümünü ve uygulama listesini hesaplar.
+1. scans the junk file categories,
+2. builds the folder tree for the selected scope,
+3. compares duplicate files,
+4. computes the storage breakdown and the app list.
 
-Üstteki üç kart **güvenle temizlenebilir** alanı (önbellekler, günlükler, geliştirici artıkları), **gözden geçirilebilir** alanı (indirmeler, bağımlılıklar, tekrarlar) ve anlık boş alanı gösterir.
+The three cards at the top show space that is **safe to clean** (caches, logs, developer leftovers), space **worth reviewing** (downloads, dependencies, duplicates) and the current free space.
 
-Öneriler öncelik sırasıyla listelenir: disk doluluğu uyarısı, uzun süredir kullanılmayan büyük dosyalar, tekrarlar, proje bağımlılıkları, önbellekler… Her öneride ya ilgili ekrana götüren bir düğme ya da (yalnızca "güvenli" etiketli kategorilerde) doğrudan **Temizle** düğmesi bulunur. Taramanın göremediği alan (izin olmayan klasörler, Time Machine anlık görüntüleri, macOS'un boşaltabileceği alan) ayrıca açıklanır.
+Suggestions are listed by priority: low disk space warnings, large files unused for a long time, duplicates, project dependencies, caches… Each suggestion has either a button that takes you to the relevant screen or, for categories labeled "safe" only, a **Clean** button. Space the scan can't see (folders without permission, Time Machine snapshots, space macOS can purge) is explained separately.
 
-## Akıllı Silme
+## Smart Cleanup
 
-<img src="images/smart-cleanup.png" width="760" alt="Akıllı Silme">
+<img src="images/smart-cleanup.png" width="760" alt="Smart Cleanup">
 
-Tek bir temizlik planı hazırlar. Üç adımdan oluşur.
+Builds a single cleanup plan in three steps.
 
-**1. Nelere dokunulmasın?** Çiplere tıklayarak kilitle:
+**1. What should never be touched?** Click the chips to lock them:
 
-| Grup | Örnekler | Varsayılan |
+| Group | Examples | Default |
 |---|---|---|
-| Kişisel alanlar | Masaüstü, Belgeler, Fotoğraflar ve Videolar, Müzik, iCloud Drive, İndirilenler | İndirilenler dışındakiler korunur |
-| Tarayıcılar | Chrome, Safari, Firefox, Brave, Arc, Edge… (yüklü olanlar) | Korunmaz |
-| Uygulamalar | Yüklü tüm uygulamalar, aranabilir | Korunmaz |
-| Geliştirici | Proje bağımlılıkları, paket önbellekleri, Xcode ve simülatörler, `~/.cache` | Korunmaz |
+| Personal areas | Desktop, Documents, Photos and Videos, Music, iCloud Drive, Downloads | Everything except Downloads is protected |
+| Browsers | Chrome, Safari, Firefox, Brave, Arc, Edge… (the installed ones) | Not protected |
+| Apps | Every installed app, searchable | Not protected |
+| Developer | Project dependencies, package caches, Xcode and simulators, `~/.cache` | Not protected |
 
-Bir uygulama korunduğunda, ona ait önbellekler ve veriler paket kimliği, bilinen klasör adları ve üretici klasörleri üzerinden eşleştirilir. Örneğin Chrome için `~/Library/Caches/Google/Chrome` korunur. Korunan bir şeyi **içeren** klasörler de korunur; böylece üst klasör silinerek korumanın etrafından dolaşılmaz.
+When an app is protected, its caches and data are matched by bundle identifier, known folder names and vendor folders. For Chrome, for example, `~/Library/Caches/Google/Chrome` is protected. Folders that **contain** something protected are protected too, so a protection can't be bypassed by deleting a parent folder.
 
-**2. Ne kadar kapsamlı?**
+**2. How thorough?**
 
-| Düzey | Plana girenler |
+| Level | What goes into the plan |
 |---|---|
-| **Güvenli** | Uygulama önbellekleri, günlükler, Xcode DerivedData, cihaz destek dosyaları, simülatör ve paket yöneticisi önbellekleri |
-| **Dengeli** | Güvenli + İndirilenler'deki kurulum dosyaları + 90 günden uzun süredir dokunulmamış projelerin bağımlılıkları + birebir aynı kopyalar (her grupta en eskisi korunur) |
-| **Kapsamlı** | Dengeli + eski indirmeler + `~/.cache` + 30 günden uzun süredir dokunulmamış projelerin bağımlılıkları |
+| **Safe** | App caches, logs, Xcode DerivedData, device support files, simulator and package manager caches |
+| **Balanced** | Safe + installers in Downloads + dependencies of projects untouched for more than 90 days + exact duplicates (the oldest in each group is kept) |
+| **Thorough** | Balanced + old downloads + `~/.cache` + dependencies of projects untouched for more than 30 days |
 
-**3. Plan.** Gruplar halinde önizleme gösterilir. İstemediğin öğenin işaretini kaldırabilir ya da sağ tıklayıp **Hariç Tut** diyebilirsin. "Korunduğu için atlananlar" bölümü hangi korumanın kaç öğeyi ve ne kadar alanı kurtardığını gösterir. Onaylanınca her şey Çöp Kutusu'na taşınır. Yalnızca "Gereksiz dosyaları kalıcı sil" ayarı açıksa yeniden oluşturulabilir önbellekler kalıcı silinir.
+**3. Plan.** The plan is previewed in groups. Uncheck anything you don't want, or right-click it › **Exclude**. The "Skipped because protected" section shows how many items and how much space each protection saved. Once you approve, everything is moved to the Trash. Regenerable caches are deleted permanently only if "Delete junk files permanently" is on in Settings.
 
-Korumalar **Otomatik Temizlik** kurallarında ve asistanın hızlı **Temizle** düğmelerinde de geçerlidir.
+Protections also apply to **Auto Cleanup** rules and to the assistant's quick **Clean** buttons.
 
-## Genel Bakış
+## Overview
 
-<img src="images/overview.png" width="760" alt="Genel Bakış">
+<img src="images/overview.png" width="760" alt="Overview">
 
-Disk doluluğu, dört özet kart (gereksiz dosyalar, büyük dosyalar, tekrarlar, proje bağımlılıkları) ve taranan klasördeki en büyük öğeler.
+Disk usage, four summary cards (junk files, large files, duplicates, project dependencies) and the largest items in the scanned folder.
 
-## Depolama Dökümü
+## Storage Breakdown
 
-<img src="images/storage.png" width="760" alt="Depolama Dökümü">
+<img src="images/storage.png" width="760" alt="Storage Breakdown">
 
-Başlangıç diskini APFS birimlerine göre böler: Veri, macOS Sistemi, Preboot, Kurtarma, Güncelleme, Sanal Bellek. macOS'un ihtiyaç halinde kendisinin boşaltabileceği **temizlenebilir** alanı ve yerel **Time Machine anlık görüntülerini** gösterir. Anlık görüntüler buradan silinebilir; bu işlem yönetici parolası ister. Kapsam *Tüm Mac* iken taramanın göremediği alan da hesaplanır.
+Splits the startup disk by APFS volume: Data, macOS System, Preboot, Recovery, Update and Virtual Memory. It shows **purgeable** space that macOS can free on its own when needed, and local **Time Machine snapshots**. Snapshots can be deleted here; this asks for an administrator password. When the scope is *Entire Mac*, the space the scan couldn't see is calculated too.
 
-## Ne Büyüdü?
+## What Grew?
 
-<img src="images/growth.png" width="760" alt="Ne Büyüdü?">
+<img src="images/growth.png" width="760" alt="What Grew?">
 
-Her tarama bittiğinde klasör ağacının özeti saklanır (kapsam başına son 12 tarama). Bu ekran şimdiki taramayı seçtiğin önceki bir taramayla karşılaştırır:
+When a scan finishes, a summary of the folder tree is saved (the last 12 scans per scope). This screen compares the current scan with an earlier one you pick:
 
-- toplam değişim,
-- en çok büyüyen ve küçülen klasörler (10 MB üstü, 3 seviye derinliğe kadar),
-- yeni ve kaybolan büyük dosyalar (100 MB üstü).
+- the total change,
+- the folders that grew or shrank the most (over 10 MB, up to 3 levels deep),
+- new and vanished large files (over 100 MB).
 
-## Klasör Gezgini
+## Folder Explorer
 
-| Liste ve halka grafik | Treemap |
+| List and donut chart | Treemap |
 |---|---|
-| <img src="images/explorer.png" alt="Klasör Gezgini liste"> | <img src="images/treemap.png" alt="Klasör Gezgini treemap"> |
+| <img src="images/explorer.png" alt="Folder Explorer list"> | <img src="images/treemap.png" alt="Folder Explorer treemap"> |
 
-Seçilen klasörün boyut ağacı. Çift tıklayarak içine girilir, üstteki yol çubuğuyla geri dönülür. Sağ tık menüsünde **Finder'da Göster**, **Hızlı Bakış**, **Hariç Tut** ve **Çöp Kutusu'na Taşı** bulunur. Sağ üstteki düğmelerle liste ve treemap görünümü arasında geçilir.
+The size tree of the selected folder. Double-click to open a folder and use the path bar to go back. The context menu has **Show in Finder**, **Quick Look**, **Copy Path**, **Exclude** and **Move to Trash…**. The buttons at the top right switch between the list and treemap views.
 
-## Büyük Dosyalar
+## Large Files
 
-<img src="images/large-files.png" width="760" alt="Büyük Dosyalar">
+<img src="images/large-files.png" width="760" alt="Large Files">
 
-Taramada bulunan büyük dosyaların tablosu. Ad, boyut, tür, son kullanım ve konuma göre sıralanabilir.
+A table of the large files found by the scan. Sort by name, size, kind, last use and location.
 
-- Filtreler: en küçük boyut, tür (video, ses, görüntü, arşiv, disk imajı, belge…), "6+ ay kullanılmayan", arama.
-- **Sistem dosyaları** seçeneği korumalı konumlardaki dosyaları da gösterir (varsayılan olarak gizli).
-- Boşluk tuşu dosyayı **Hızlı Bakış** ile önizler.
-- Sağ tık › **Harici Diske Arşivle**: dosyalar seçilen diske kopyalanır, kopya SHA-256 ile doğrulanır, ancak ondan sonra kaynak Çöp Kutusu'na taşınır. Klasör yapısı `CleanMac Arşivi/` altında korunur.
+- Filters: minimum size, kind (video, audio, image, archive, disk image, document…), "Unused for 6+ months", search.
+- **System files** also shows files in protected locations (hidden by default).
+- Press Space to preview a file with **Quick Look**.
+- Right-click › **Archive to External Disk…**: the files are copied to the chosen disk, each copy is verified with SHA-256, and only then is the source moved to the Trash. The folder structure is kept under `CleanMac Archive/`.
 
-## Tekrarlanan Dosyalar
+## Duplicate Files
 
-<img src="images/duplicates.png" width="760" alt="Tekrarlanan Dosyalar">
+<img src="images/duplicates.png" width="760" alt="Duplicate Files">
 
-İçeriği birebir aynı dosyaları üç aşamada bulur: aynı boyut → baş ve son 64 KB'nin özeti → tam SHA-256. Sabit bağlantılar (aynı inode) kopya sayılmaz. Yalnızca bulutta duran iCloud dosyaları okunmaz.
+Finds byte-identical files in three stages: same size → digest of the first and last 64 KB → full SHA-256. Hard links (same inode) are not counted as copies. Cloud-only iCloud files are not read.
 
-- **Akıllı Seç** her gruptan en eski kopya dışındakileri seçer.
-- Bir gruptaki tüm kopyaları seçmek engellenir. Silme anında korunan kopyanın hâlâ diskte olduğu yeniden kontrol edilir.
-- **En az** menüsüyle küçük dosyalar elenebilir (varsayılan 1 MB).
+- **Smart Select** selects every copy in each group except the oldest.
+- Selecting every copy in a group is blocked. At removal time CleanMac checks again that the kept copy is still on disk.
+- Use **At least** to skip small files (1 MB by default).
 
-## Benzer Fotoğraflar
+## Similar Photos
 
-<img src="images/similar-photos.png" width="760" alt="Benzer Fotoğraflar">
+<img src="images/similar-photos.png" width="760" alt="Similar Photos">
 
-Seri çekimleri, yeniden boyutlandırılmış ya da yeniden kaydedilmiş kopyaları bulur. Apple Vision'ın görüntü parmak izi (`VNGenerateImageFeaturePrintRequest`) tamamen cihaz üzerinde hesaplanır ve birbirine yeterince yakın fotoğraflar gruplanır. JPEG, PNG, HEIC, TIFF, WebP ve yaygın RAW biçimleri desteklenir. **Akıllı Seç** her grupta en büyük (genellikle en kaliteli) dosyayı korur.
+Finds burst shots and resized or re-saved copies. Apple Vision's image feature print (`VNGenerateImageFeaturePrintRequest`) is computed entirely on device, and photos that are close enough are grouped. JPEG, PNG, HEIC, TIFF, WebP and common RAW formats are supported. **Smart Select** keeps the largest (usually highest-quality) file in each group.
 
-## Gereksiz Dosyalar
+## Junk Files
 
-<img src="images/junk.png" width="760" alt="Gereksiz Dosyalar">
+<img src="images/junk.png" width="760" alt="Junk Files">
 
-| Kategori | Etiket |
+| Category | Label |
 |---|---|
-| Uygulama önbellekleri, günlükler | Güvenli |
-| Xcode DerivedData, cihaz destek dosyaları, simülatör önbellekleri | Güvenli |
-| Paket yöneticisi önbellekleri (npm, pnpm, Gradle, Cargo, Bun, Go…) | Güvenli |
-| Çöp Kutusu | Güvenli (boşaltmak kalıcıdır) |
-| `~/.cache` | Gözden geçir |
-| İndirilenler'deki kurulum dosyaları (`.dmg`, `.pkg`, `.xip`, `.iso`) | Gözden geçir |
-| Eski indirmeler (90 günden uzun süredir açılmamış) | Gözden geçir |
-| Xcode arşivleri, iPhone / iPad yedekleri | Gözden geçir |
-| Proje bağımlılıkları (`node_modules`, `.venv`, `Pods`…) | Gözden geçir |
+| App caches, logs | Safe |
+| Xcode DerivedData, device support files, simulator caches | Safe |
+| Package manager caches (npm, pnpm, Gradle, Cargo, Bun, Go…) | Safe |
+| Trash | Safe (emptying is permanent) |
+| `~/.cache` | Needs review |
+| Installers in Downloads (`.dmg`, `.pkg`, `.xip`, `.iso`) | Needs review |
+| Old downloads (not opened for more than 90 days) | Needs review |
+| Xcode archives, iPhone / iPad backups | Needs review |
+| Project dependencies (`node_modules`, `.venv`, `Pods`…) | Needs review |
 
-"Güvenli" kategoriler uygulamaların gerektiğinde yeniden oluşturduğu verilerdir. Her kategori açılarak öğe öğe seçilebilir. **Kalıcı olarak sil** seçeneği Çöp Kutusu'nu atlar.
+"Safe" categories are data that apps recreate when needed. Expand any category to pick items one by one. **Delete permanently** skips the Trash.
 
-## Uygulamalar
+## Apps
 
-<img src="images/apps.png" width="760" alt="Uygulamalar">
+<img src="images/apps.png" width="760" alt="Apps">
 
-`/Applications` ve `~/Applications` içindeki uygulamaları boyut ve son açılma tarihiyle listeler. **6+ ay açılmayanlar** filtresi unutulan uygulamaları bulur. Bir uygulama seçildiğinde `~/Library` içinde bıraktığı dosyalar (önbellek, tercih, Application Support, kapsayıcılar…) paket kimliğiyle eşleştirilerek gösterilir. Uygulama, seçtiğin kalıntılarla birlikte Çöp Kutusu'na taşınır. Apple uygulamaları kaldırılamaz.
+Lists the apps in `/Applications` and `~/Applications` with their size and last-opened date. **Not opened in 6+ months** finds forgotten apps. When you select an app, the files it left in `~/Library` (caches, preferences, Application Support, containers…) are matched by bundle identifier and shown. The app is moved to the Trash together with the leftovers you select. Apps that ship with macOS can't be removed.
 
-## Geliştirici
+## Developer
 
-Geliştirici araçlarının kendi temizlik komutlarını kullanır ve önce ne silineceğini gösterir:
+Uses developer tools' own cleanup commands and shows what will be deleted first:
 
-- **Homebrew:** `brew cleanup --dry-run` çıktısı ve tek tıkla `brew cleanup`.
-- **Xcode simülatörleri:** yüklü olmayan iOS sürümlerine ait kullanılmayan simülatörler (`simctl delete unavailable`).
-- **Dokunulmamış projeler:** son değişikliği seçilen süreden eski projelerin `node_modules` / `.venv` / `Pods` klasörleri.
-- **Docker özeti:** `docker system df` ve `docker system prune`.
+- **Homebrew:** the output of `brew cleanup --dry-run`, and `brew cleanup` with one click.
+- **Xcode simulators:** unused simulators for iOS versions that are no longer installed (`simctl delete unavailable`).
+- **Untouched projects:** `node_modules` / `.venv` / `Pods` folders of projects not changed within the selected period.
+- **Docker summary:** `docker system df` and `docker system prune`.
 
 ## Docker
 
-Docker yüklüyse kenar çubuğunda görünür. Docker Desktop çalışmıyorsa tek tıkla başlatılabilir.
+Appears in the sidebar when Docker is installed. If Docker Desktop isn't running, you can start it with one click.
 
-- **İmajlar:** etiketsiz (dangling), hiçbir konteynerin kullanmadığı, aynı imaja ait fazladan etiketler ve aynı deponun eski sürümleri ayrı ayrı işaretlenir.
-- **Konteynerler:** durmuş konteynerler ve boyutları.
-- **Birimler:** hiçbir konteynere bağlı olmayan (sahipsiz) birimler.
-- **Derleme önbelleği:** geri kazanılabilir alan.
-- **Sanal diski küçült:** Docker'ın sanal diskinde boş kalan bloklar TRIM ile macOS'a geri verilir.
+- **Images:** dangling (untagged) images, images no container uses, extra tags of the same image, and old versions of the same repository are flagged separately.
+- **Containers:** stopped containers and their sizes.
+- **Volumes:** volumes not attached to any container.
+- **Build cache:** reclaimable space.
+- **Shrink the virtual disk:** free blocks in Docker's virtual disk are returned to macOS with TRIM.
 
-Silme işlemleri Docker CLI üzerinden yapılır. Kullanılan imajlar, çalışan konteynerler ve bağlı birimler silinmez.
+Deletions go through the Docker CLI. Images in use, running containers and attached volumes are never deleted.
 
-## Otomatik Temizlik
+## Auto Cleanup
 
-<img src="images/rules.png" width="760" alt="Otomatik Temizlik">
+<img src="images/rules.png" width="760" alt="Auto Cleanup">
 
-Zamanlanmış kurallar: "Her hafta uygulama önbellekleri", "Her ay paket yöneticisi önbellekleri", "30 günden eski kurulum dosyaları" gibi. Zamanı gelen bir kural:
+Scheduled rules such as "app caches every week", "package manager caches every month" or "installers older than 30 days". When a rule is due:
 
-- varsayılan olarak yalnızca **önizleme** hazırlar ve bildirim gönderir; uygulamak için onayın gerekir,
-- **Onay istemeden uygula** açıksa kendiliğinden çalışır.
+- by default it only prepares a **preview** and sends a notification; it needs your approval to run,
+- if **Apply without asking** is on, it runs by itself.
 
-Her iki durumda da hariç tutulanlar ve Akıllı Silme korumaları uygulanır. Kurallar uygulama açıkken (menü çubuğunda çalışırken dahil) kontrol edilir.
+Either way, exclusions and Smart Cleanup protections are respected. Rules are checked while the app is running (including when it is only in the menu bar).
 
-## Temizlik Geçmişi
+## Cleanup History
 
-CleanMac ile kaldırılan her öğenin kaydı: orijinal yol, boyut, tarih ve Çöp Kutusu'ndaki yeri. Çöp Kutusu'nda duran öğeler **Geri Al** ile eski yerine taşınır. Eski yerde aynı adla yeni bir dosya varsa üzerine yazılmaz.
+A record of every item removed with CleanMac: the original path, size, date and location in the Trash. Items still in the Trash can be put back with **Restore**. If a file with the same name now exists at the original location, it is not overwritten.
 
-## Hariç Tutulanlar
+## Exclusions
 
-Buraya eklenen klasör ve dosyalar hiçbir listede gösterilmez, hiçbir öneriye girmez ve silme sırasında son kontrolde de atlanır. Listelerde sağ tık › **Hariç Tut** ile eklenir, bu ekrandan kaldırılır.
+Folders and files added here never appear in any list, never go into any suggestion, and are skipped at the final check during removal. Add them with right-click › **Exclude** in any list, and remove them from this screen.
 
-## Menü çubuğu ve Ayarlar
+## Menu bar and Settings
 
-Menü çubuğu simgesi boş alanı gösterir. Açılan pencereden analiz başlatılabilir ve ana pencere açılabilir. Menü çubuğu açıkken ana pencere kapatılsa da uygulama çalışmaya devam eder.
+The menu bar item shows free space. From its window you can start an analysis or open the main window. While the menu bar item is enabled, the app keeps running after the main window is closed.
 
-**Ayarlar (⌘,)**
+**Settings (⌘,)**
 
-| Ayar | Varsayılan |
+| Setting | Default |
 |---|---|
-| Açılışta karşılama ekranını göster | Açık |
-| Menü çubuğunda boş alanı göster | Açık |
-| Boş alan azalınca bildirim gönder (eşik %5–25) | Açık, %10 |
-| Gereksiz dosyaları kalıcı sil (Çöp Kutusu'nu atla) | Kapalı |
+| Language | English |
+| Show the welcome screen at launch | On |
+| Show free space in the menu bar | On |
+| Notify me when free space is low (threshold 5–25%) | On, 10% |
+| Delete junk files permanently (skip the Trash) | Off |
 
-Boş alan 5 dakikada bir kontrol edilir; günde en fazla bir bildirim gönderilir.
+Free space is checked every 5 minutes; at most one notification is sent per day.
 
-## Tarama kapsamı
+## Language
 
-Asistan ya da Klasör Gezgini'ndeki **Kapsam** menüsünden seçilir ve hatırlanır:
+The interface is available in **English** (default) and **Türkçe**. Choose one in **Settings › Language**, or pick **System Default** to follow the macOS language. The change takes effect after a restart; the **Restart Now** button relaunches the app. Translations live in a standard String Catalog; see [development.md](development.md#translations) to add or improve a language.
 
-- **Ana Klasör (~):** yalnızca kullanıcı dosyaların. En hızlı seçenek.
-- **Tüm Mac (/):** başlangıç diskinin tamamı. Harici diskler (`/Volumes`), `/System/Volumes` ve diski ikinci kez gösteren sanal yollar (`/.nofollow`, `/.resolve`, `/.vol`) atlanır.
-- **Farklı Klasör…:** herhangi bir klasör ya da harici disk.
+## Scan scope
 
-## Klavye kısayolları
+Choose from the **Scope** menu on the Smart Assistant or Folder Explorer screen; your choice is remembered:
 
-| Kısayol | İşlem |
+- **Home Folder (~):** only your user files. The fastest option.
+- **Entire Mac (/):** the whole startup disk. External disks (`/Volumes`), `/System/Volumes` and virtual paths that show the disk a second time (`/.nofollow`, `/.resolve`, `/.vol`) are skipped.
+- **Other Folder…:** any folder or external disk.
+
+## Keyboard shortcuts
+
+| Shortcut | Action |
 |---|---|
-| ⇧⌘R | Tam analizi başlat |
-| ⌘O | Klasör seç ve tara |
-| ⌘. | Taramayı durdur |
-| ⌘, | Ayarlar |
-| Boşluk | Seçili dosyayı Hızlı Bakış ile önizle (listelerde) |
+| ⇧⌘R | Start full analysis |
+| ⌘O | Choose folder and scan |
+| ⌘. | Stop scan |
+| ⌘, | Settings |
+| Space | Preview the selected file with Quick Look (in lists) |

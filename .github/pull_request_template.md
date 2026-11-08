@@ -1,17 +1,18 @@
-## Ne değişti?
+## What changed?
 
-<!-- Kısa açıklama. İlgili issue: #… -->
+<!-- Short description. Related issue: #… -->
 
-## Neden?
+## Why?
 
-## Nasıl test edildi?
+## How was it tested?
 
-## Kontrol listesi
+## Checklist
 
-- [ ] `swift build` ve `swift test` temiz geçiyor
-- [ ] Davranış değişikliği için test eklendi / güncellendi
-- [ ] Dosya kaldıran yeni kod `AppState.remove(_:permanently:)` üzerinden geçiyor
-- [ ] Yeni silme akışı onay penceresi gösteriyor ve varsayılanı Çöp Kutusu
-- [ ] Ağ isteği veya üçüncü taraf bağımlılık eklenmedi
-- [ ] Arayüz değiştiyse ekran görüntüsü eklendi (gerekirse `./scripts/screenshots.sh`)
-- [ ] `CHANGELOG.md` güncellendi
+- [ ] `swift build` and `swift test` pass
+- [ ] Tests were added or updated for behavior changes
+- [ ] New code that removes files goes through `AppState.remove(_:permanently:)`
+- [ ] New deletion flows show a confirmation and default to the Trash
+- [ ] No network requests or third-party dependencies were added
+- [ ] New user-facing strings are in the string catalog with a Turkish translation (`./scripts/update-strings.sh`)
+- [ ] Screenshots are attached if the UI changed (`./scripts/screenshots.sh` if needed)
+- [ ] `CHANGELOG.md` is updated

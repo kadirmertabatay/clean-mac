@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Güvenlik açığı bildir
+  - name: Report a security vulnerability
     url: https://github.com/kadirmertabatay/clean-mac/security/advisories/new
-    about: Güvenlik sorunlarını herkese açık issue yerine özel olarak bildir.
-  - name: Belgeler ve SSS
+    about: Please report security issues privately instead of opening a public issue.
+  - name: Documentation and FAQ
     url: https://github.com/kadirmertabatay/clean-mac/blob/main/docs/faq.md
-    about: Sık sorulan sorular ve sorun giderme.
+    about: Frequently asked questions and troubleshooting.

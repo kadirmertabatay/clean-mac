@@ -1,117 +1,121 @@
 <p align="center">
-  <img src="Resources/AppIcon-1024.png" width="128" alt="CleanMac simgesi">
+  <img src="Resources/AppIcon-1024.png" width="128" alt="CleanMac icon">
 </p>
 
 <h1 align="center">CleanMac</h1>
 
 <p align="center">
-  Mac'inin depolama alanını analiz eden, neyin yer kapladığını açıklayan ve<br>
-  güvenle temizlemene yardım eden, <b>tamamen yerel</b> çalışan açık kaynaklı bir asistan.
+  An open-source, <b>fully local</b> storage assistant for macOS that shows what is filling up<br>
+  your disk, explains it, and helps you clean up safely.
 </p>
 
 <p align="center">
   <a href="https://github.com/kadirmertabatay/clean-mac/actions/workflows/ci.yml"><img src="https://github.com/kadirmertabatay/clean-mac/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/lisans-MIT-blue.svg" alt="MIT Lisansı"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
   <img src="https://img.shields.io/badge/macOS-14%2B-black?logo=apple" alt="macOS 14+">
   <img src="https://img.shields.io/badge/Swift-5.9%2B-F05138?logo=swift&logoColor=white" alt="Swift 5.9+">
-  <img src="https://img.shields.io/badge/aray%C3%BCz-SwiftUI-0A84FF" alt="SwiftUI">
-  <img src="https://img.shields.io/badge/ba%C4%9F%C4%B1ml%C4%B1l%C4%B1k-yok-brightgreen" alt="Harici bağımlılık yok">
+  <img src="https://img.shields.io/badge/UI-SwiftUI-0A84FF" alt="SwiftUI">
+  <img src="https://img.shields.io/badge/dependencies-none-brightgreen" alt="No dependencies">
+  <img src="https://img.shields.io/badge/languages-English%20%7C%20T%C3%BCrk%C3%A7e-lightgrey" alt="English and Turkish">
 </p>
 
 <p align="center">
-  <a href="#kurulum">Kurulum</a> ·
-  <a href="#özellikler">Özellikler</a> ·
-  <a href="#güvenlik-ilkeleri">Güvenlik</a> ·
-  <a href="docs/README.md">Belgeler</a> ·
-  <a href="CONTRIBUTING.md">Katkıda Bulun</a>
+  <a href="#installation">Installation</a> ·
+  <a href="#features">Features</a> ·
+  <a href="#safety-principles">Safety</a> ·
+  <a href="docs/README.md">Documentation</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
 <p align="center">
-  <img src="docs/images/assistant.png" width="900" alt="CleanMac Akıllı Asistan ekranı">
+  <img src="docs/images/assistant.png" width="900" alt="CleanMac Smart Assistant screen">
 </p>
 
 ---
 
-## Neden CleanMac?
+## Why CleanMac?
 
-- **Gizlilik önce gelir.** Uygulama hiçbir ağ isteği yapmaz: analitik yok, hesap yok, bulut yok. Tüm tarama ve karşılaştırmalar senin Mac'inde yapılır.
-- **Silmeden önce anlatır.** Her öneri neyin, neden ve ne kadar yer kapladığını, silinirse ne olacağını söyler.
-- **Geri alınabilir.** Varsayılan olarak her şey Çöp Kutusu'na gider ve Temizlik Geçmişi'nden tek tıkla eski yerine döner.
-- **Son söz senin.** Akıllı Silme'de dokunulmayacak uygulamaları ve klasörleri (ör. "Chrome'a dokunma") sen seçersin. Bu korumalar tüm otomatik akışlarda geçerlidir.
-- **Hafif ve yerel.** Saf SwiftUI, harici bağımlılık yok, tüm çekirdekleri kullanan paralel bir tarayıcı.
+- **Privacy first.** The app makes no network requests: no analytics, no accounts, no cloud. Every scan and comparison runs on your Mac.
+- **Explains before it deletes.** Every suggestion says what is using space, why, how much, and what happens if you remove it.
+- **Reversible.** By default everything goes to the Trash and can be put back from Cleanup History with one click.
+- **You stay in control.** In Smart Cleanup you choose the apps and folders that must never be touched (e.g. "don't touch Chrome"), and those protections apply to every automated flow.
+- **Lightweight and native.** Pure SwiftUI, no third-party dependencies, and a parallel scanner that uses every core.
+- **English and Turkish.** Switch the interface language in Settings.
 
-## Özellikler
+## Features
 
 <table>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/images/smart-cleanup.png" alt="Akıllı Silme ekranı">
-      <p><b>Akıllı Silme.</b> Önce neye dokunulmayacağını seç (Masaüstü, Chrome, proje bağımlılıkları…), sonra Güvenli / Dengeli / Kapsamlı düzeyde tek bir plan al. Neyin hangi koruma yüzünden atlandığı ayrıca gösterilir.</p>
+      <img src="docs/images/smart-cleanup.png" alt="Smart Cleanup screen">
+      <p><b>Smart Cleanup.</b> First choose what must never be touched (Desktop, Chrome, project dependencies…), then get a single Safe / Balanced / Thorough plan. Items skipped because of a protection are listed separately.</p>
     </td>
     <td width="50%" valign="top">
-      <img src="docs/images/treemap.png" alt="Klasör Gezgini treemap görünümü">
-      <p><b>Klasör Gezgini.</b> Boyut ağacını liste ve halka grafik ya da treemap olarak gez. Çift tıklayarak içine gir, sağ tıklayarak Finder'da göster ya da Çöp Kutusu'na taşı.</p>
+      <img src="docs/images/treemap.png" alt="Folder Explorer treemap view">
+      <p><b>Folder Explorer.</b> Browse the size tree as a list with a donut chart, or as a treemap. Double-click to drill down; right-click to show in Finder or move to the Trash.</p>
     </td>
   </tr>
   <tr>
     <td valign="top">
-      <img src="docs/images/duplicates.png" alt="Tekrarlanan Dosyalar ekranı">
-      <p><b>Tekrarlanan Dosyalar.</b> Boyut → baş/son özeti → tam SHA-256 ile birebir aynı dosyaları bulur. "Akıllı Seç" en eski kopyayı korur; bir gruptaki tüm kopyaların silinmesi engellenir.</p>
+      <img src="docs/images/duplicates.png" alt="Duplicate Files screen">
+      <p><b>Duplicate Files.</b> Finds byte-identical files with size → head/tail digest → full SHA-256. Smart Select keeps the oldest copy, and selecting every copy in a group is blocked.</p>
     </td>
     <td valign="top">
-      <img src="docs/images/large-files.png" alt="Büyük Dosyalar ekranı">
-      <p><b>Büyük Dosyalar.</b> Boyuta, türe, son kullanıma ve konuma göre sırala. "6+ ay kullanılmayan" filtresi ve harici diske doğrulamalı arşivleme.</p>
-    </td>
-  </tr>
-  <tr>
-    <td valign="top">
-      <img src="docs/images/junk.png" alt="Gereksiz Dosyalar ekranı">
-      <p><b>Gereksiz Dosyalar.</b> Önbellekler, günlükler, Xcode verileri, paket yöneticisi önbellekleri, kurulum dosyaları, eski indirmeler, iPhone yedekleri ve Çöp Kutusu. Her kategori güvenlik düzeyiyle etiketlenir.</p>
-    </td>
-    <td valign="top">
-      <img src="docs/images/growth.png" alt="Ne Büyüdü? ekranı">
-      <p><b>Ne Büyüdü?</b> Her taramanın özeti saklanır. Önceki taramaya göre büyüyen ve küçülen klasörleri, yeni ve kaybolan büyük dosyaları gösterir.</p>
+      <img src="docs/images/large-files.png" alt="Large Files screen">
+      <p><b>Large Files.</b> Sort by size, kind, last use and location. Includes an "unused for 6+ months" filter and verified archiving to an external disk.</p>
     </td>
   </tr>
   <tr>
     <td valign="top">
-      <img src="docs/images/similar-photos.png" alt="Benzer Fotoğraflar ekranı">
-      <p><b>Benzer Fotoğraflar.</b> Seri çekimleri ve yeniden kaydedilmiş kopyaları Apple Vision görüntü parmak iziyle, tamamen cihaz üzerinde gruplar.</p>
+      <img src="docs/images/junk.png" alt="Junk Files screen">
+      <p><b>Junk Files.</b> Caches, logs, Xcode data, package manager caches, installers, old downloads, iPhone backups and the Trash. Every category is labeled with a safety level.</p>
     </td>
     <td valign="top">
-      <img src="docs/images/storage.png" alt="Depolama Dökümü ekranı">
-      <p><b>Depolama Dökümü.</b> APFS birimleri, macOS'un kendi boşaltabileceği alan, yerel Time Machine anlık görüntüleri ve taramanın göremediği alan.</p>
+      <img src="docs/images/growth.png" alt="What Grew? screen">
+      <p><b>What Grew?</b> A summary of every scan is kept. Shows folders that grew or shrank and large files that appeared or disappeared since an earlier scan.</p>
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <img src="docs/images/similar-photos.png" alt="Similar Photos screen">
+      <p><b>Similar Photos.</b> Groups burst shots and re-saved copies using Apple Vision image feature prints, entirely on device.</p>
+    </td>
+    <td valign="top">
+      <img src="docs/images/storage.png" alt="Storage Breakdown screen">
+      <p><b>Storage Breakdown.</b> APFS volumes, space macOS can purge on its own, local Time Machine snapshots, and the space the scan can't see.</p>
     </td>
   </tr>
 </table>
 
-Ayrıca:
+And also:
 
 | | |
 |---|---|
-| **Akıllı Asistan** | Tek tıkla tam analiz yapar ve önerileri öncelik sırasıyla sunar. |
-| **Uygulamalar** | Uygulamaları `~/Library` içinde bıraktıkları dosyalarla birlikte kaldırır, uzun süredir açılmayanları gösterir. |
-| **Geliştirici** | Homebrew temizliği, kullanılmayan Xcode simülatörleri, dokunulmamış projelerin `node_modules` / `.venv` klasörleri. |
-| **Docker** | Docker yüklüyse görünür. İmaj, konteyner, birim ve derleme önbelleğini listeler. Etiketsiz, eski sürüm, kullanılmayan ve fazladan etiketleri bulur, sanal diski küçültür. |
-| **Otomatik Temizlik** | Zamanlanmış kurallar (ör. haftalık önbellek temizliği). Varsayılan olarak önce önizleme ve bildirim gelir; uygulamak için senin onayın gerekir. |
-| **Menü çubuğu** | Boş alanı üst barda gösterir, belirlediğin eşiğin altına düşünce bildirim gönderir. |
-| **Geçmiş ve Hariç Tutulanlar** | Kaldırılan her öğenin kaydı ve geri alma. Hariç tutulanlar hiçbir zaman önerilmez ve silinmez. |
+| **Smart Assistant** | Runs a full analysis with one click and lists suggestions by priority. |
+| **Apps** | Uninstalls apps together with the files they left in `~/Library`, and shows apps you haven't opened in a long time. |
+| **Developer** | Homebrew cleanup, unused Xcode simulators, and `node_modules` / `.venv` folders of untouched projects. |
+| **Docker** | Appears when Docker is installed. Lists images, containers, volumes and the build cache. Finds untagged, outdated, unused and redundant tags, and shrinks the virtual disk. |
+| **Auto Cleanup** | Scheduled rules (e.g. clean app caches weekly). By default a rule prepares a preview and a notification first and needs your approval. |
+| **Menu bar** | Shows free space in the menu bar and notifies you when it drops below your threshold. |
+| **History and Exclusions** | A record of every removed item with restore. Excluded items are never suggested and never deleted. |
 
-Tüm ekranların ayrıntılı anlatımı için: **[docs/features.md](docs/features.md)**
+Every screen is described in detail in **[docs/features.md](docs/features.md)**.
 
-## Kurulum
+## Installation
 
-### Hazır sürüm
+### Download a release
 
-1. [Releases](https://github.com/kadirmertabatay/clean-mac/releases) sayfasından `CleanMac-<sürüm>.zip` dosyasını indir ve aç.
-2. `CleanMac.app` dosyasını **Uygulamalar** klasörüne taşı.
-3. Uygulama bir Apple Developer ID ile değil, ad-hoc olarak imzalı. İlk açılışta macOS uyarı verirse uygulamaya **sağ tıkla › Aç** de. macOS 15 ve sonrasında **Sistem Ayarları › Gizlilik ve Güvenlik › Yine de Aç** düğmesini kullan.
+1. Download `CleanMac-<version>.zip` from the [Releases](https://github.com/kadirmertabatay/clean-mac/releases) page and unzip it.
+2. Move `CleanMac.app` to your **Applications** folder.
+3. The app is ad-hoc signed, not signed with an Apple Developer ID. If macOS warns you on first launch, **right-click the app › Open**. On macOS 15 and later, use **System Settings › Privacy & Security › Open Anyway**.
 
-> İndirdiğin dosyayı sürüm notlarındaki SHA-256 değeriyle doğrulayabilirsin: `shasum -a 256 CleanMac-<sürüm>.zip`
+> You can verify the download against the SHA-256 in the release notes: `shasum -a 256 CleanMac-<version>.zip`
 
-### Kaynaktan derleme
+Releases are universal binaries for Apple silicon and Intel Macs.
 
-Gereksinimler: macOS 14 Sonoma veya üstü ve Xcode 15+ (ya da Xcode Komut Satırı Araçları, Swift 5.9+).
+### Build from source
+
+Requirements: macOS 14 Sonoma or later, and Xcode 15+ (or the Xcode Command Line Tools with Swift 5.9+).
 
 ```bash
 git clone https://github.com/kadirmertabatay/clean-mac.git
@@ -119,86 +123,61 @@ cd clean-mac
 ./build-app.sh            # build/CleanMac.app
 open build/CleanMac.app
 
-./build-app.sh --install  # ayrıca /Applications içine kopyalar
+./build-app.sh --install  # also copies it to /Applications
 ```
 
-Geliştirme sırasında `swift run`, testler için `swift test`. Ayrıntılar: [docs/development.md](docs/development.md)
+Use `swift run` while developing and `swift test` to run the tests. See [docs/development.md](docs/development.md) for details.
 
-## Kullanım
+## Usage
 
-1. **Akıllı Asistan** ekranında **Kapsam**'ı seç: *Ana Klasör (~)*, *Tüm Mac (/)* ya da *Farklı Klasör…*
-2. **Tam Analizi Başlat**'a bas. Gereksiz dosyalar, klasör boyutları, tekrarlar, depolama dökümü ve uygulamalar tek seferde hesaplanır.
-3. Önerileri incele. Her satırdaki düğme seni ilgili ekrana götürür ya da (yalnızca güvenli kategorilerde) doğrudan temizler.
-4. Tek bir temizlik planı istersen **Akıllı Silme**'ye geç, korumalarını seç ve planı onayla.
+1. On the **Smart Assistant** screen, pick a **Scope**: *Home Folder (~)*, *Entire Mac (/)* or *Other Folder…*
+2. Click **Start Full Analysis**. Junk files, folder sizes, duplicates, the storage breakdown and apps are computed in one pass.
+3. Review the suggestions. Each row's button takes you to the relevant screen or, for "safe" categories only, cleans right away.
+4. For a single cleanup plan, open **Smart Cleanup**, choose your protections and approve the plan.
 
-Bir klasörü kalıcı olarak korumak için listelerde ona sağ tıkla › **Hariç Tut**.
+To permanently protect a folder, right-click it in any list › **Exclude**.
 
-## Güvenlik ilkeleri
+To change the interface language, open **Settings (⌘,) › Language** and choose **English**, **Türkçe** or **System Default**, then restart the app.
 
-CleanMac dosya silen bir araç olduğu için güvenlik, tasarımın merkezinde:
+## Safety principles
 
-- **Onaysız silme yok.** Her işlemden önce özet ve onay penceresi gösterilir.
-- **Varsayılan: Çöp Kutusu.** Kalıcı silme yalnızca açıkça seçilirse (ve Çöp Kutusu'nu boşaltırken) yapılır.
-- **Son anda yeniden doğrulama.** Silmeden hemen önce her öğe yeniden kontrol edilir. Taramadan sonra değiştiyse, artık yoksa ya da hariç tutulduysa atlanır.
-- **Tekrarlarda en az bir kopya kalır.** Silme anında korunan kopyanın hâlâ var olduğu doğrulanır. Sabit bağlantılar (hard link) kopya sayılmaz.
-- **Korumalı alanlar.** Sistem klasörleri ve uygulama paketlerinin (`.app`, `.photoslibrary` …) içi, büyük dosya ve tekrar listelerinde varsayılan olarak gizlidir.
-- **iCloud'a dokunmaz.** Yalnızca bulutta duran (yerelde olmayan) dosyalar okunmaz, böylece indirme tetiklenmez.
-- **Dürüst durum.** Okunamayan konumlar "Temiz" değil "İzin yok" olarak gösterilir.
+CleanMac deletes files, so safety is at the center of its design:
 
-Tasarımın ayrıntıları için [docs/safety.md](docs/safety.md). Bir güvenlik açığı bulursan lütfen [SECURITY.md](SECURITY.md)'deki adımları izle.
+- **No deletion without confirmation.** Every action shows a summary and a confirmation dialog first.
+- **Trash by default.** Permanent deletion only happens when you explicitly choose it (and when emptying the Trash).
+- **Re-checked at the last moment.** Right before removal, every item is checked again. If it changed after the scan, no longer exists or has been excluded, it is skipped.
+- **Duplicates always keep a copy.** At removal time CleanMac verifies that the copy being kept still exists. Hard links are not counted as copies.
+- **Protected locations.** System folders and the contents of app bundles (`.app`, `.photoslibrary` …) are hidden from the large-file and duplicate lists by default.
+- **iCloud is left alone.** Cloud-only (not downloaded) files are never read, so no downloads are triggered.
+- **Honest status.** Locations that can't be read are shown as "No access", never as "All clean".
 
-## İzinler
+See [docs/safety.md](docs/safety.md) for the design in detail. If you find a security issue, please follow [SECURITY.md](SECURITY.md).
 
-| İzin | Neden | Gerekli mi? |
+## Permissions
+
+| Permission | Why | Required? |
 |---|---|---|
-| Masaüstü / Belgeler / İndirilenler | Bu klasörlerin boyutunu hesaplamak | İlk taramada macOS sorar |
-| Tam Disk Erişimi | Çöp Kutusu, Mail, iPhone yedekleri gibi korumalı konumları görmek | İsteğe bağlı; yoksa asistan hatırlatır |
-| Bildirimler | Boş alan azaldığında ve otomatik temizlik onay beklediğinde haber vermek | İsteğe bağlı |
-| Yönetici parolası | Yalnızca yerel Time Machine anlık görüntüsü silerken | İşlem anında sorulur |
+| Desktop / Documents / Downloads | To measure the size of these folders | macOS asks during the first scan |
+| Full Disk Access | To see protected locations such as the Trash, Mail and iPhone backups | Optional; the assistant reminds you if it's missing |
+| Notifications | To tell you when free space is low or an Auto Cleanup rule awaits approval | Optional |
+| Administrator password | Only when deleting local Time Machine snapshots | Asked at that moment |
 
-Tam Disk Erişimi vermek için CleanMac'i **Sistem Ayarları › Gizlilik ve Güvenlik › Tam Disk Erişimi** listesine ekle.
+To grant Full Disk Access, add CleanMac under **System Settings › Privacy & Security › Full Disk Access**.
 
-## Belgeler
+## Documentation
 
-| Belge | İçerik |
+| Document | Contents |
 |---|---|
-| [Özellikler](docs/features.md) | Her ekranın ayrıntılı anlatımı ve ekran görüntüleri |
-| [Güvenlik ve Gizlilik](docs/safety.md) | Silme akışı, doğrulamalar, korumalar, saklanan veriler |
-| [Mimari](docs/architecture.md) | Kod yapısı, tarayıcı tasarımı, eşzamanlılık modeli |
-| [Geliştirme](docs/development.md) | Derleme, test, ortam değişkenleri, ekran görüntüleri, sürüm çıkarma |
-| [SSS ve Sorun Giderme](docs/faq.md) | Sık sorulan sorular, izin sorunları, açılış uyarıları |
+| [Features](docs/features.md) | Every screen in detail, with screenshots |
+| [Safety and Privacy](docs/safety.md) | The removal flow, checks, protections and stored data |
+| [Architecture](docs/architecture.md) | Code layout, scanner design, concurrency model, localization |
+| [Development](docs/development.md) | Building, testing, environment variables, screenshots, translations, releasing |
+| [FAQ and Troubleshooting](docs/faq.md) | Common questions, permission issues, launch warnings |
 
-## Katkıda bulunma
+## Contributing
 
-Hata bildirimleri, öneriler ve pull request'ler memnuniyetle karşılanır. Başlamadan önce [CONTRIBUTING.md](CONTRIBUTING.md) ve [Davranış Kuralları](CODE_OF_CONDUCT.md) belgelerine göz at. Sürüm notları: [CHANGELOG.md](CHANGELOG.md)
+Bug reports, ideas, translations and pull requests are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md) before you start. Release notes are in [CHANGELOG.md](CHANGELOG.md).
 
-## Lisans
+## License
 
-CleanMac [MIT Lisansı](LICENSE) ile dağıtılır. © 2026 Kadir Mert Abatay
-
----
-
-<details>
-<summary><b>English summary</b></summary>
-
-<br>
-
-**CleanMac** is a free, open-source, fully local storage assistant for macOS 14+, written in SwiftUI with no third-party dependencies. It scans your home folder, the whole startup disk or any folder, explains what is using space and suggests safe clean-ups.
-
-Features:
-- a recommendations assistant
-- a smart cleanup planner where you choose what must never be touched (e.g. Chrome or your Desktop)
-- a folder explorer with treemap
-- large-file and exact-duplicate (SHA-256) finders
-- on-device similar-photo grouping with Apple Vision
-- junk categories: caches, logs, Xcode data, package caches, installers, old downloads
-- APFS storage breakdown and scan-to-scan growth history
-- an app uninstaller that also removes leftovers
-- developer and Docker clean-up
-- scheduled rules and a menu bar monitor
-
-The app makes no network requests. Items go to the Trash by default and can be restored from the history screen. Every item is re-checked right before removal. The interface is currently in Turkish; translations are welcome (see [CONTRIBUTING.md](CONTRIBUTING.md)).
-
-Build with `./build-app.sh && open build/CleanMac.app`. Licensed under MIT.
-
-</details>
+CleanMac is released under the [MIT License](LICENSE). © 2026 Kadir Mert Abatay
