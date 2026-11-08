@@ -1,0 +1,29 @@
+name: Release
+
+# v1.2.3 biçiminde bir etiket gönderildiğinde evrensel uygulamayı derler ve taslak bir GitHub sürümü oluşturur.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test
+        run: swift test
+      - name: Evrensel paket ve arşiv
+        run: ./build-app.sh --zip
+      - name: Taslak sürüm oluştur
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          ZIP="build/CleanMac-$VERSION.zip"
+          test -f "$ZIP" || { echo "Info.plist sürümü ($ZIP) etiketle eşleşmiyor"; exit 1; }
+          SHA=$(cut -d' ' -f1 "$ZIP.sha256")
+          gh release create "$GITHUB_REF_NAME" "$ZIP" "$ZIP.sha256" --draft --title "CleanMac $VERSION" \
+            --notes "Kurulum ve ilk açılış için README'ye bak. SHA-256: \`$SHA\`"

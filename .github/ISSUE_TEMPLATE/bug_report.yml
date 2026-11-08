@@ -1,0 +1,51 @@
+name: Hata bildirimi
+description: Beklendiği gibi çalışmayan bir şeyi bildir
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Bildirdiğin için teşekkürler! **Güvenlik açıklarını burada değil, [özel olarak](https://github.com/kadirmertabatay/clean-mac/security/advisories/new) bildir.**
+        Ekran görüntüsü eklemeden önce kişisel dosya adlarını gizlemeyi unutma.
+  - type: textarea
+    id: what
+    attributes:
+      label: Ne oldu?
+      description: Gerçekleşen davranışı ve beklediğin davranışı yaz.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Yeniden oluşturma adımları
+      placeholder: |
+        1. Kapsam: Ana Klasör
+        2. Tam Analizi Başlat
+        3. …
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: CleanMac sürümü
+      description: CleanMac › CleanMac Hakkında
+      placeholder: 1.0.0
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS sürümü ve Mac modeli
+      placeholder: macOS 15.1, MacBook Air M2
+    validations:
+      required: true
+  - type: dropdown
+    id: fda
+    attributes:
+      label: Tam Disk Erişimi verildi mi?
+      options: ["Evet", "Hayır", "Bilmiyorum"]
+  - type: textarea
+    id: extra
+    attributes:
+      label: Ek bilgi
+      description: Ekran görüntüleri, Konsol günlükleri vb.
