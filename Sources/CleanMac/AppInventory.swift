@@ -30,12 +30,12 @@ struct AppLeftover: Identifiable, Hashable {
 
 /// Yüklü uygulamaları ve Library'de bıraktıkları dosyaları bulur.
 enum AppInventory {
-    static let home = FileManager.default.homeDirectoryForCurrentUser
+    static let home = Paths.home
 
     static func installedApps() -> [InstalledApp] {
         let fm = FileManager()
         var urls: [URL] = []
-        for dir in [URL(fileURLWithPath: "/Applications"), home.appendingPathComponent("Applications")] {
+        for dir in Paths.applicationDirectories {
             let items = (try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])) ?? []
             for item in items {
                 if item.pathExtension == "app" {

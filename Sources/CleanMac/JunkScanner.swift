@@ -51,7 +51,7 @@ enum JunkScanner {
         let source: Source
     }
 
-    static let home = FileManager.default.homeDirectoryForCurrentUser.path
+    static let home = Paths.home.path
     static let installerExtensions: Set<String> = ["dmg", "pkg", "mpkg", "xip", "iso"]
     static let oldDownloadDays = 90
 

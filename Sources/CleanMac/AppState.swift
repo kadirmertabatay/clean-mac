@@ -65,7 +65,7 @@ final class AppState: ObservableObject {
         let isError: Bool
     }
 
-    static let home = FileManager.default.homeDirectoryForCurrentUser
+    static let home = Paths.home
 
     @Published var section: AppSection? = .assistant
     @Published private(set) var disk: DiskInfo? = DiskInfo.current()
@@ -147,8 +147,7 @@ final class AppState: ObservableObject {
     @Published private(set) var excludedPaths: [String]
     private let historyURL: URL
 
-    nonisolated static let defaultHistoryURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        .appendingPathComponent("CleanMac/history.json")
+    nonisolated static let defaultHistoryURL = Paths.dataDirectory.appendingPathComponent("history.json")
 
     init(historyURL: URL = AppState.defaultHistoryURL) {
         if let custom = ProcessInfo.processInfo.environment["CLEANMAC_SCAN_ROOT"] {

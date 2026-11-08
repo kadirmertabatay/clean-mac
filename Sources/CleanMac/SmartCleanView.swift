@@ -25,7 +25,10 @@ struct SmartCleanView: View {
             .frame(maxWidth: 920)
             .frame(maxWidth: .infinity)
         }
-        .task { if state.apps.isEmpty { await state.loadApps() } }
+        .task {
+            if state.apps.isEmpty { await state.loadApps() }
+            if ScreenshotMode.isActive && plan == nil { await build() }
+        }
         .confirmationDialog("Akıllı Silme planı uygulansın mı?", isPresented: $confirm) {
             Button("Uygula (\(selectedSize.formattedBytes))", role: .destructive) {
                 guard let plan else { return }

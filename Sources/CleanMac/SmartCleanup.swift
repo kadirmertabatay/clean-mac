@@ -39,7 +39,7 @@ struct Protection: Identifiable, Hashable {
 }
 
 enum ProtectionCatalog {
-    static let home = FileManager.default.homeDirectoryForCurrentUser.path
+    static let home = Paths.home.path
 
     /// Varsayılan olarak korunan kişisel alanlar.
     static let defaultIDs: Set<String> = ["area.desktop", "area.documents", "area.pictures", "area.music", "area.icloud"]

@@ -22,7 +22,7 @@ enum ArchiveEngine {
 
     /// Hedefte kaynak yapısını korur: ~/Movies/a.mov → <hedef>/CleanMac Arşivi/Movies/a.mov
     static func destination(for source: URL, in root: URL) -> URL {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let home = Paths.home.path
         var rel = source.path
         if rel.hasPrefix(home + "/") { rel = String(rel.dropFirst(home.count + 1)) } else { rel = String(rel.drop { $0 == "/" }) }
         var dest = root.appendingPathComponent("CleanMac Arşivi").appendingPathComponent(rel)

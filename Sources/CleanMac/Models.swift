@@ -1,5 +1,31 @@
 import Foundation
 
+/// Uygulamanın kullandığı temel konumlar.
+/// `CLEANMAC_HOME` ortam değişkeni ana klasörü değiştirir (demo verisiyle ekran görüntüsü almak ve testler için);
+/// `CLEANMAC_DATA_DIR` geçmiş ve tarama özetlerinin tutulduğu klasörü değiştirir.
+enum Paths {
+    static let home: URL = {
+        if let custom = ProcessInfo.processInfo.environment["CLEANMAC_HOME"], !custom.isEmpty {
+            return URL(fileURLWithPath: custom, isDirectory: true)
+        }
+        return FileManager.default.homeDirectoryForCurrentUser
+    }()
+
+    /// Ana klasör değiştirildiyse yalnızca onun Applications klasörüne bakılır (demo modunda gerçek uygulamalar görünmez).
+    static var applicationDirectories: [URL] {
+        let user = home.appendingPathComponent("Applications")
+        return ProcessInfo.processInfo.environment["CLEANMAC_HOME"] == nil ? [URL(fileURLWithPath: "/Applications"), user] : [user]
+    }
+
+    static let dataDirectory: URL = {
+        if let custom = ProcessInfo.processInfo.environment["CLEANMAC_DATA_DIR"], !custom.isEmpty {
+            return URL(fileURLWithPath: custom, isDirectory: true)
+        }
+        return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("CleanMac")
+    }()
+}
+
 extension Int64 {
     var formattedBytes: String {
         ByteCountFormatter.string(fromByteCount: self, countStyle: .file)
@@ -9,7 +35,7 @@ extension Int64 {
 extension URL {
     /// Ana klasörü "~" ile kısaltılmış yol.
     var abbreviatedPath: String {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let home = Paths.home.path
         let p = path
         if p == home { return "~" }
         if p.hasPrefix(home + "/") { return "~" + String(p.dropFirst(home.count)) }

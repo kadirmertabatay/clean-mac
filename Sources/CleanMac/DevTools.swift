@@ -56,7 +56,7 @@ enum DevTools {
         guard out.status == 0,
               let json = try? JSONSerialization.jsonObject(with: Data(out.stdout.utf8)) as? [String: Any],
               let devices = json["devices"] as? [String: [[String: Any]]] else { return [] }
-        let base = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Developer/CoreSimulator/Devices")
+        let base = Paths.home.appendingPathComponent("Library/Developer/CoreSimulator/Devices")
         return devices.flatMap { runtime, list in
             list.compactMap { d -> Simulator? in
                 guard let udid = d["udid"] as? String else { return nil }
@@ -93,7 +93,7 @@ enum DevTools {
                              "/Applications/Docker.app/Contents/Resources/bin/docker"]
         .first { FileManager.default.isExecutableFile(atPath: $0) }
 
-    static let dockerDataURL = FileManager.default.homeDirectoryForCurrentUser
+    static let dockerDataURL = Paths.home
         .appendingPathComponent("Library/Containers/com.docker.docker/Data/vms")
 
     static func dockerReport() -> DockerReport? {

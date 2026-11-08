@@ -75,7 +75,7 @@ enum DockerService {
         return Shell.run(docker, ["info", "--format", "{{.ServerVersion}}"]).status == 0
     }
 
-    static let diskImageURL = FileManager.default.homeDirectoryForCurrentUser
+    static let diskImageURL = Paths.home
         .appendingPathComponent("Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw")
 
     // MARK: Okuma

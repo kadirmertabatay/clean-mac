@@ -67,7 +67,7 @@ struct CleanupRule: Codable, Identifiable, Hashable {
 
 enum RuleEngine {
     static func targets(for rule: CleanupRule,
-                        downloads: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Downloads"),
+                        downloads: URL = Paths.home.appendingPathComponent("Downloads"),
                         now: Date = Date()) -> [RemovalTarget] {
         switch rule.kind {
         case .junk(let id):

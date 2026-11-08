@@ -16,7 +16,13 @@ struct CleanMacApp: App {
             ContentView()
                 .environmentObject(state)
                 .frame(minWidth: 1040, minHeight: 660)
-                .task { SpaceMonitor.shared.start(state: state) }
+                .task {
+                    if ScreenshotMode.isActive {
+                        await ScreenshotMode.run(state: state)
+                    } else {
+                        SpaceMonitor.shared.start(state: state)
+                    }
+                }
         }
         .windowToolbarStyle(.unified)
         .commands {
@@ -48,7 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
-        if UserDefaults.standard.bool(forKey: Prefs.lowSpaceAlerts) { SpaceMonitor.requestPermission() }
+        if UserDefaults.standard.bool(forKey: Prefs.lowSpaceAlerts) && !ScreenshotMode.isActive { SpaceMonitor.requestPermission() }
     }
 
     /// Menü çubuğu simgesi açıkken pencere kapansa da uygulama çalışmaya devam eder.
@@ -64,6 +70,7 @@ struct ContentView: View {
     /// Karşılama ekranı uygulama açılışında bir kez gösterilir; pencere yeniden açılınca gösterilmez.
     @MainActor private static var splashShown = false
     @MainActor private static func shouldShowSplash() -> Bool {
+        if ScreenshotMode.isActive { return !ScreenshotMode.warmupOnly }
         guard !splashShown, UserDefaults.standard.bool(forKey: Prefs.showSplash) else { return false }
         splashShown = true
         return true
