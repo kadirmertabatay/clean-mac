@@ -1,16 +1,16 @@
-// Uygulama simgesini üretir: swift scripts/make-icon.swift <logo.png> <çıktı-klasörü>
-// Logo kenarlardaki yarı saydam lekelerden temizlenir, kırpılır ve beyaz çerçeveli macOS simgesine yerleştirilir.
+// Generates the app icon: swift scripts/make-icon.swift <logo.png> <output-folder>
+// The logo is cleaned of semi-transparent specks around the edges, cropped and placed on a white-framed macOS icon.
 import AppKit
 
 let args = CommandLine.arguments
 let source = URL(fileURLWithPath: args.count > 1 ? args[1] : "Resources/logo.png")
 let outDir = URL(fileURLWithPath: args.count > 2 ? args[2] : "Resources")
 
-// MARK: - Logoyu temizle
+// MARK: - Clean up the logo
 
 func cleanedLogo(_ url: URL) -> CGImage {
     guard let img = NSImage(contentsOf: url), let cg = img.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
-        fatalError("Logo okunamadı: \(url.path)")
+        fatalError("Couldn't read the logo: \(url.path)")
     }
     let w = cg.width, h = cg.height
     var px = [UInt8](repeating: 0, count: w * h * 4)
@@ -18,7 +18,7 @@ func cleanedLogo(_ url: URL) -> CGImage {
                         space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
     ctx.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
 
-    // Belirgin (alfa > 120) piksellerden en büyük bağlı bileşen = logonun kendisi.
+    // The largest connected component of solid (alpha > 120) pixels is the logo itself.
     let solid = (0..<(w * h)).map { px[$0 * 4 + 3] > 120 }
     var label = [Int32](repeating: 0, count: w * h)
     var best: Int32 = 0, bestCount = 0, next: Int32 = 1
@@ -41,7 +41,7 @@ func cleanedLogo(_ url: URL) -> CGImage {
         next += 1
     }
 
-    // Kenar yumuşatmasını korumak için maskeyi 2 piksel genişlet; dışındaki her şeyi sil.
+    // Dilate the mask by 2 pixels to keep the anti-aliasing; erase everything outside it.
     var keep = label.map { $0 == best }
     for _ in 0..<2 {
         var grown = keep
@@ -66,7 +66,7 @@ func cleanedLogo(_ url: URL) -> CGImage {
 
 let logo = cleanedLogo(source)
 
-// MARK: - Simgeyi çiz
+// MARK: - Draw the icon
 
 func render(_ px: Int) -> Data {
     let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: px, pixelsHigh: px, bitsPerSample: 8,
@@ -77,7 +77,7 @@ func render(_ px: Int) -> Data {
     NSGraphicsContext.current = gctx
     gctx.imageInterpolation = .high
     let s = CGFloat(px)
-    // macOS simge ızgarası: 1024'lük tuvalde 824'lük yuvarlatılmış kare.
+    // macOS icon grid: an 824 pt rounded square on a 1024 pt canvas.
     let tile = NSRect(x: s * 0.0977, y: s * 0.0977, width: s * 0.8047, height: s * 0.8047)
     let radius = tile.width * 0.225
     let path = NSBezierPath(roundedRect: tile, xRadius: radius, yRadius: radius)
@@ -97,7 +97,7 @@ func render(_ px: Int) -> Data {
     path.lineWidth = max(1, s * 0.004)
     path.stroke()
 
-    // Logoyu karenin %78'ine sığdır ve ortala.
+    // Fit the logo into 78% of the square and center it.
     let box = tile.insetBy(dx: tile.width * 0.11, dy: tile.height * 0.11)
     let aspect = CGFloat(logo.width) / CGFloat(logo.height)
     var size = NSSize(width: box.width, height: box.width / aspect)
@@ -123,4 +123,4 @@ p.arguments = ["-c", "icns", iconset.path, "-o", outDir.appendingPathComponent("
 try! p.run()
 p.waitUntilExit()
 try? FileManager.default.removeItem(at: iconset)
-print("AppIcon.icns oluşturuldu")
+print("AppIcon.icns created")
