@@ -2,13 +2,14 @@ import AppKit
 import SwiftUI
 
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
-    case assistant, overview, storage, growth, explorer, largeFiles, duplicates, photos, junk, apps, developer, docker, rules, history, exclusions
+    case assistant, smart, overview, storage, growth, explorer, largeFiles, duplicates, photos, junk, apps, developer, docker, rules, history, exclusions
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .assistant: "Akıllı Asistan"
+        case .smart: "Akıllı Silme"
         case .overview: "Genel Bakış"
         case .storage: "Depolama Dökümü"
         case .growth: "Ne Büyüdü?"
@@ -29,6 +30,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
     var icon: String {
         switch self {
         case .assistant: "sparkles"
+        case .smart: "wand.and.sparkles"
         case .overview: "internaldrive"
         case .storage: "chart.bar.doc.horizontal"
         case .growth: "chart.line.uptrend.xyaxis"
@@ -133,6 +135,10 @@ final class AppState: ObservableObject {
     @Published private(set) var isLoadingDocker = false
     static let dockerInstalled = DockerService.isInstalled
 
+    // Akıllı Silme
+    @Published private(set) var smartProtectionIDs: Set<String>
+    @Published private(set) var smartStep = ""
+
     // Otomatik temizlik kuralları
     @Published private(set) var rules: [CleanupRule] = []
 
@@ -156,6 +162,7 @@ final class AppState: ObservableObject {
         self.historyURL = historyURL
         snapshotStore = SnapshotStore(directory: historyURL.deletingLastPathComponent().appendingPathComponent("snapshots"))
         excludedPaths = UserDefaults.standard.stringArray(forKey: "excludedPaths") ?? []
+        smartProtectionIDs = Set(UserDefaults.standard.stringArray(forKey: "smartProtections") ?? Array(ProtectionCatalog.defaultIDs))
         if let data = UserDefaults.standard.data(forKey: "cleanupRules"),
            let saved = try? JSONDecoder().decode([CleanupRule].self, from: data) {
             rules = saved
@@ -480,7 +487,8 @@ final class AppState: ObservableObject {
     func cleanJunkCategory(_ id: String) async {
         guard let category = junkCategories.first(where: { $0.id == id }) else { return }
         let permanent = category.permanentOnly || UserDefaults.standard.bool(forKey: "permanentDelete")
-        await remove(category.items.map { RemovalTarget(url: $0.url, size: $0.size) }, permanently: permanent)
+        let items = category.items.filter { !isSmartProtected($0.id) }
+        await remove(items.map { RemovalTarget(url: $0.url, size: $0.size) }, permanently: permanent)
     }
 
     /// Silmeden hemen önce yapılan güvenlik kontrolü. Sorun yoksa nil döner.
@@ -557,6 +565,82 @@ final class AppState: ObservableObject {
         }
     }
 
+    // MARK: - Akıllı Silme
+
+    var protectionCatalog: [Protection] { ProtectionCatalog.all(apps: apps) }
+    var activeProtections: [Protection] { protectionCatalog.filter { smartProtectionIDs.contains($0.id) } }
+
+    func setProtection(_ id: String, _ on: Bool) {
+        if on { smartProtectionIDs.insert(id) } else { smartProtectionIDs.remove(id) }
+        UserDefaults.standard.set(Array(smartProtectionIDs).sorted(), forKey: "smartProtections")
+    }
+
+    /// Akıllı Silme korumalarından biri ya da hariç tutma listesi bu yolu kapsıyor mu?
+    func isSmartProtected(_ path: String) -> Bool {
+        isExcluded(path) || Protection.protecting(path, in: activeProtections) != nil
+    }
+
+    func buildSmartPlan(level: SmartLevel) async -> SmartPlan? {
+        defer { smartStep = "" }
+        if apps.isEmpty { smartStep = "Uygulamalar okunuyor…"; await loadApps() }
+        smartStep = "Önbellekler ve gereksiz dosyalar aranıyor…"
+        await scanJunk()
+        var groups: [SmartPlanGroup] = []
+        for id in level.junkCategories {
+            guard let c = junkCategories.first(where: { $0.id == id }), !c.items.isEmpty else { continue }
+            groups.append(SmartPlanGroup(id: "junk-\(id)", title: c.title, detail: c.detail, icon: c.icon,
+                                         items: c.items.map { SmartPlanItem(url: $0.url, size: $0.size) },
+                                         regenerable: c.safety == .safe))
+        }
+
+        if level != .safe {
+            if rootNode == nil {
+                smartStep = "\(scanRoot.abbreviatedPath) taranıyor…"
+                guard await scan() else { return nil }
+            }
+            if let days = level.staleProjectDays {
+                smartStep = "Projeler inceleniyor…"
+                let artifacts = visibleDevArtifacts
+                let cutoff = Date().addingTimeInterval(-Double(days) * 86_400)
+                let stale = await Task.detached { artifacts.filter { (DevTools.projectLastActivity($0.url) ?? .distantFuture) < cutoff } }.value
+                if !stale.isEmpty {
+                    groups.append(SmartPlanGroup(id: "deps", title: "\(days)+ gündür dokunulmamış projelerin bağımlılıkları",
+                                                 detail: "node_modules, .venv, Pods… Projede tekrar çalışınca npm install / pip install ile geri gelir.",
+                                                 icon: "shippingbox", items: stale.map { SmartPlanItem(url: $0.url, size: $0.size) },
+                                                 regenerable: false))
+                }
+            }
+            if level.includesDuplicates {
+                if !duplicatesReady { smartStep = "Tekrarlanan dosyalar karşılaştırılıyor…"; await findDuplicates() }
+                var items: [SmartPlanItem] = []
+                for g in duplicateGroups {
+                    let files = g.files.filter { !$0.isProtected }
+                    guard files.count > 1, let keep = files.first else { continue }
+                    items += files.dropFirst().map { SmartPlanItem(url: $0.url, size: $0.size, modified: $0.modified, keepAnyOf: [keep.url]) }
+                }
+                if !items.isEmpty {
+                    groups.append(SmartPlanGroup(id: "dups", title: "Birebir aynı kopyalar",
+                                                 detail: "Her grupta en eski dosya korunur; diğer kopyalar kaldırılır.",
+                                                 icon: "doc.on.doc", items: items, regenerable: false))
+                }
+            }
+        }
+        let result = SmartPlanner.filter(groups, protections: activeProtections, isExcluded: isExcluded)
+        return SmartPlan(groups: result.groups, protected: result.protected)
+    }
+
+    func applySmartPlan(_ plan: SmartPlan, selected: Set<String>) async {
+        func targets(_ groups: [SmartPlanGroup]) -> [RemovalTarget] {
+            groups.flatMap(\.items).filter { selected.contains($0.id) }
+                .map { RemovalTarget(url: $0.url, size: $0.size, expectedModified: $0.modified, keepAnyOf: $0.keepAnyOf) }
+        }
+        let permanentOK = UserDefaults.standard.bool(forKey: "permanentDelete")
+        let others = targets(plan.groups.filter { !$0.regenerable })
+        let regenerable = targets(plan.groups.filter(\.regenerable))
+        if !others.isEmpty { await remove(others, permanently: false) }
+        if !regenerable.isEmpty { await remove(regenerable, permanently: permanentOK) }
+    }
+
     // MARK: - Docker
 
     func loadDocker() async {
@@ -610,7 +694,8 @@ final class AppState: ObservableObject {
         guard let rule = rules.first(where: { $0.id == id }) else { return }
         let list: [RemovalTarget]
         if let targets { list = targets } else { list = await Task.detached { RuleEngine.targets(for: rule) }.value }
-        if !list.isEmpty { await remove(list, permanently: RuleEngine.isPermanent(rule)) }
+        let allowed = list.filter { !isSmartProtected($0.url.path) }
+        if !allowed.isEmpty { await remove(allowed, permanently: RuleEngine.isPermanent(rule)) }
         updateRule(id) {
             $0.lastRun = Date()
             $0.pendingSize = nil
@@ -624,7 +709,7 @@ final class AppState: ObservableObject {
                 await runRule(rule.id)
                 SpaceMonitor.notify(title: "Otomatik temizlik yapıldı", body: rule.title)
             } else if rule.pendingSize == nil {
-                let targets = await Task.detached { RuleEngine.targets(for: rule) }.value
+                let targets = await Task.detached { RuleEngine.targets(for: rule) }.value.filter { !isSmartProtected($0.url.path) }
                 let size = targets.reduce(Int64(0)) { $0 + $1.size }
                 if targets.isEmpty {
                     updateRule(rule.id) { $0.lastRun = Date() }

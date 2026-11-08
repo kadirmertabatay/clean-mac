@@ -64,7 +64,7 @@ struct ContentView: View {
         NavigationSplitView {
             List(selection: $state.section) {
                 Section("Asistan") {
-                    ForEach([AppSection.assistant, .overview, .storage, .growth]) { s in
+                    ForEach([AppSection.assistant, .smart, .overview, .storage, .growth]) { s in
                         Label(s.title, systemImage: s.icon).tag(s)
                     }
                 }
@@ -89,6 +89,7 @@ struct ContentView: View {
         } detail: {
             switch state.section ?? .assistant {
             case .assistant: AssistantView()
+            case .smart: SmartCleanView()
             case .overview: OverviewView()
             case .storage: StorageView()
             case .growth: GrowthView()

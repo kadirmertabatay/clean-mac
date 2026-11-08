@@ -86,7 +86,7 @@ struct RulesView: View {
         loadingPreview = rule.id
         let targets = await Task.detached(priority: .userInitiated) { RuleEngine.targets(for: rule) }.value
         loadingPreview = nil
-        preview = (rule, targets.filter { !state.isExcluded($0.url.path) })
+        preview = (rule, targets.filter { !state.isSmartProtected($0.url.path) })
     }
 
     private func previewSheet(_ rule: CleanupRule, _ targets: [RemovalTarget]) -> some View {

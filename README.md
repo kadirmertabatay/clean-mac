@@ -9,6 +9,7 @@ Mac'in depolama alanını analiz eden ve temiz tutmana yardım eden, tamamen yer
 | Bölüm | Ne yapar |
 |---|---|
 | **Akıllı Asistan** | Tek tıkla tam analiz (gereksiz dosyalar → klasör taraması → tekrarlar) yapar ve öncelik sırasına göre öneriler sunar: disk doluluğu, temizlenebilir önbellekler, uzun süredir kullanılmayan büyük dosyalar, tekrarlar, proje bağımlılıkları |
+| **Akıllı Silme** | Önce dokunulmayacakları seç (ör. Chrome, Slack, Masaüstü, proje bağımlılıkları), sonra Güvenli / Dengeli / Kapsamlı tek bir temizlik planı al; neyin hangi koruma yüzünden atlandığı gösterilir. Korumalar Otomatik Temizlik kurallarında ve asistanın hızlı temizlemesinde de geçerlidir |
 | **Genel Bakış** | Disk doluluğu, özet kartlar, en büyük klasörler |
 | **Depolama Dökümü** | APFS birimleri (Veri, Sistem, Preboot, Kurtarma, VM), temizlenebilir alan, taramada görünmeyen alan; yerel Time Machine anlık görüntülerini silme |
 | **Ne Büyüdü?** | Her taramanın özeti saklanır; önceki taramalara göre büyüyen/küçülen klasörler ve yeni büyük dosyalar |

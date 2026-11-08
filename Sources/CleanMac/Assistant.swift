@@ -232,9 +232,10 @@ struct AssistantView: View {
             }
             Button("Vazgeç", role: .cancel) {}
         } message: { category in
-            Text(category.permanentOnly || permanentDelete
+            let protectedCount = category.items.filter { state.isSmartProtected($0.id) }.count
+            Text((protectedCount > 0 ? "Akıllı Silme korumaları nedeniyle \(protectedCount) öğe atlanacak. " : "") + (category.permanentOnly || permanentDelete
                  ? "\(category.items.count) öğe kalıcı olarak silinecek. Bu işlem geri alınamaz."
-                 : "\(category.items.count) öğe Çöp Kutusu'na taşınacak. Yer açmak için daha sonra çöpü boşaltman gerekir.")
+                 : "\(category.items.count) öğe Çöp Kutusu'na taşınacak. Yer açmak için daha sonra çöpü boşaltman gerekir."))
         }
     }
 
