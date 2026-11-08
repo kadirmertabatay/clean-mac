@@ -26,15 +26,15 @@ struct DuplicatesView: View {
         let selectedSize = selectedFiles.reduce(Int64(0)) { $0 + $1.size }
 
         VStack(spacing: 0) {
-            PageHeader(title: "Tekrarlanan Dosyalar", subtitle: "İçeriği birebir aynı olan dosyalar (SHA-256 ile doğrulanır)") {
-                Picker("En az", selection: $state.duplicateMinSize) {
+            PageHeader(title: L("Duplicate Files"), subtitle: L("Files with exactly the same content (verified with SHA-256)")) {
+                Picker(L("At least"), selection: $state.duplicateMinSize) {
                     ForEach(Self.sizeOptions, id: \.1) { Text($0.0).tag($0.1) }
                 }
                 .frame(width: 130)
                 Button {
                     selected = []
                     Task { await state.findDuplicates() }
-                } label: { Label(state.duplicatesReady ? "Yeniden Ara" : "Tekrarları Bul", systemImage: "magnifyingglass") }
+                } label: { Label(state.duplicatesReady ? L("Search Again") : L("Find Duplicates"), systemImage: "magnifyingglass") }
                     .disabled(state.isScanning || state.isFindingDuplicates)
             }
             Divider()
@@ -43,17 +43,17 @@ struct DuplicatesView: View {
             } else if state.isFindingDuplicates {
                 VStack(spacing: 14) {
                     ProgressView(value: state.duplicateProgress).frame(width: 320)
-                    Text("Dosyalar karşılaştırılıyor… \(state.duplicateProgress.formatted(.percent.precision(.fractionLength(0))))")
-                    Button("Durdur") { state.cancelScan() }
+                    Text(L("Comparing files… \(state.duplicateProgress.formatted(.percent.precision(.fractionLength(0))))"))
+                    Button(L("Stop")) { state.cancelScan() }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if !state.duplicatesReady {
-                EmptyStateView(icon: "doc.on.doc", title: "Tekrarlanan dosyaları bul",
-                               message: "\(state.scanRoot.abbreviatedPath) içindeki dosyalar boyut ve içerik özetiyle karşılaştırılır. Dosyalar yalnızca okunur, hiçbir şey değiştirilmez.",
-                               actionTitle: "Tekrarları Bul") { Task { await state.findDuplicates() } }
+                EmptyStateView(icon: "doc.on.doc", title: L("Find duplicate files"),
+                               message: L("Files in \(state.scanRoot.abbreviatedPath) are compared by size and a content digest. Files are only read; nothing is changed."),
+                               actionTitle: L("Find Duplicates")) { Task { await state.findDuplicates() } }
             } else if groups.isEmpty {
-                EmptyStateView(icon: "checkmark.circle", title: "Tekrarlanan dosya yok",
-                               message: "Seçilen boyutun üzerinde aynı içeriğe sahip dosya bulunamadı.")
+                EmptyStateView(icon: "checkmark.circle", title: L("No duplicate files"),
+                               message: L("No files with the same content above the selected size were found."))
             } else {
                 List {
                     ForEach(groups) { g in
@@ -63,26 +63,26 @@ struct DuplicatesView: View {
                             }
                         } header: {
                             HStack {
-                                Text("\(g.files.count) kopya · her biri \(g.size.formattedBytes)")
+                                Text(L("\(g.files.count) copies · \(g.size.formattedBytes) each"))
                                 Spacer()
-                                Text("Boşa giden: \(g.wasted.formattedBytes)").foregroundStyle(.orange)
+                                Text(L("Wasted: \(g.wasted.formattedBytes)")).foregroundStyle(.orange)
                             }
                         }
                     }
                 }
                 Divider()
                 HStack(spacing: 12) {
-                    Text("\(groups.count) grup · boşa giden \(groups.reduce(Int64(0)) { $0 + $1.wasted }.formattedBytes)")
+                    Text(L("\(groups.count) groups · \(groups.reduce(Int64(0)) { $0 + $1.wasted }.formattedBytes) wasted"))
                         .foregroundStyle(.secondary)
-                    Toggle("Sistem dosyaları", isOn: $showProtected)
+                    Toggle(L("System files"), isOn: $showProtected)
                         .toggleStyle(.checkbox)
                         .fixedSize()
-                        .help("~/Library ve uygulama paketlerinin içindeki kopyaları da göster.")
+                        .help(L("Also show copies inside ~/Library and app bundles."))
                     Spacer()
-                    Button("Akıllı Seç") { smartSelect(groups) }
-                        .help("Her gruptaki en eski dosyayı korur, diğer kopyaları seçer.")
-                    Button("Seçimi Temizle") { selected = [] }.disabled(selected.isEmpty)
-                    Button("Çöp Kutusu'na Taşı (\(selectedFiles.count))", role: .destructive) {
+                    Button(L("Smart Select")) { smartSelect(groups) }
+                        .help(L("Keeps the oldest file in each group and selects the other copies."))
+                    Button(L("Clear Selection")) { selected = [] }.disabled(selected.isEmpty)
+                    Button(L("Move to Trash (\(selectedFiles.count))"), role: .destructive) {
                         if let problem = validate(groups) { warning = problem } else { confirm = true }
                     }
                     .buttonStyle(.borderedProminent)
@@ -93,9 +93,9 @@ struct DuplicatesView: View {
                 .padding(.vertical, 10)
             }
         }
-        .confirmationDialog("\(selectedFiles.count) kopya Çöp Kutusu'na taşınsın mı?", isPresented: $confirm) {
-            Button("Çöp Kutusu'na Taşı (\(selectedSize.formattedBytes))", role: .destructive) {
-                // Her silinen kopya için, aynı gruptaki seçilmemiş kopyalardan en az birinin hâlâ var olması şart.
+        .confirmationDialog(L("Move \(selectedFiles.count) copies to the Trash?"), isPresented: $confirm) {
+            Button(L("Move to Trash (\(selectedSize.formattedBytes))"), role: .destructive) {
+                // For every removed copy, at least one unselected copy from the same group must still exist.
                 let targets = groups.flatMap { g -> [RemovalTarget] in
                     let keep = g.files.filter { !selected.contains($0.id) }.map(\.url)
                     return g.files.filter { selected.contains($0.id) }.map {
@@ -105,13 +105,13 @@ struct DuplicatesView: View {
                 selected = []
                 Task { await state.remove(targets, permanently: false) }
             }
-            Button("Vazgeç", role: .cancel) {}
+            Button(L("Cancel"), role: .cancel) {}
         } message: {
-            Text("Her gruptan en az bir kopya korunacak. Dosyalar Çöp Kutusu'ndan geri alınabilir.")
+            Text(L("At least one copy from each group will be kept. Files can be restored from the Trash."))
         }
         .quickLookPreview($previewURL)
-        .alert("Dikkat", isPresented: Binding(get: { warning != nil }, set: { if !$0 { warning = nil } })) {
-            Button("Tamam") {}
+        .alert(L("Warning"), isPresented: Binding(get: { warning != nil }, set: { if !$0 { warning = nil } })) {
+            Button(L("OK")) {}
         } message: {
             Text(warning ?? "")
         }
@@ -127,7 +127,7 @@ struct DuplicatesView: View {
                 HStack(spacing: 6) {
                     Text(f.name).lineLimit(1)
                     if isOriginal {
-                        Text("en eski").font(.caption2.bold()).foregroundStyle(.green)
+                        Text(L("oldest")).font(.caption2.bold()).foregroundStyle(.green)
                             .padding(.horizontal, 5).padding(.vertical, 1)
                             .background(Color.green.opacity(0.15), in: Capsule())
                     }
@@ -139,17 +139,17 @@ struct DuplicatesView: View {
                 .font(.caption).foregroundStyle(.secondary)
             Button { previewURL = f.url } label: { Image(systemName: "eye") }
                 .buttonStyle(.borderless)
-                .help("Hızlı Bakış")
+                .help(L("Quick Look"))
             Button { Finder.reveal([f.url]) } label: { Image(systemName: "magnifyingglass") }
                 .buttonStyle(.borderless)
-                .help("Finder'da göster")
+                .help(L("Show in Finder"))
         }
         .padding(.vertical, 2)
         .contextMenu {
-            Button("Hızlı Bakış") { previewURL = f.url }
-            Button("Finder'da Göster") { Finder.reveal([f.url]) }
-            Button("Hariç Tut") { state.addExclusion(f.url) }
-            Button("Klasörünü Hariç Tut") { state.addExclusion(f.url.deletingLastPathComponent()) }
+            Button(L("Quick Look")) { previewURL = f.url }
+            Button(L("Show in Finder")) { Finder.reveal([f.url]) }
+            Button(L("Exclude")) { state.addExclusion(f.url) }
+            Button(L("Exclude Its Folder")) { state.addExclusion(f.url.deletingLastPathComponent()) }
         }
     }
 
@@ -162,6 +162,6 @@ struct DuplicatesView: View {
     private func validate(_ groups: [DuplicateGroup]) -> String? {
         let full = groups.filter { g in g.files.allSatisfy { selected.contains($0.id) } }
         guard !full.isEmpty else { return nil }
-        return "\(full.count) grupta tüm kopyalar seçili. Verini kaybetmemek için her gruptan en az bir dosyayı seçimden çıkar."
+        return L("All copies are selected in \(full.count) groups. To avoid losing data, deselect at least one file from each group.")
     }
 }

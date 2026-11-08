@@ -30,20 +30,20 @@ struct JunkView: View {
         let total = targets.reduce(Int64(0)) { $0 + $1.target.size }
 
         VStack(spacing: 0) {
-            PageHeader(title: "Gereksiz Dosyalar", subtitle: "Önbellekler, günlükler, geliştirici artıkları ve unutulmuş indirmeler") {
+            PageHeader(title: L("Junk Files"), subtitle: L("Caches, logs, developer leftovers and forgotten downloads")) {
                 Button {
                     selected = []
                     Task { await state.scanJunk() }
-                } label: { Label("Yeniden Tara", systemImage: "arrow.clockwise") }
+                } label: { Label(L("Scan Again"), systemImage: "arrow.clockwise") }
                     .disabled(state.isScanningJunk)
             }
             Divider()
             if state.isScanningJunk && !state.junkReady {
-                ProgressView("Bilinen konumlar taranıyor…").frame(maxWidth: .infinity, maxHeight: .infinity)
+                ProgressView(L("Scanning known locations…")).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if !state.junkReady {
-                EmptyStateView(icon: "trash", title: "Gereksiz dosyaları tara",
-                               message: "Önbellek, günlük ve geliştirici araçlarının bıraktığı dosyaları bul.",
-                               actionTitle: "Tara") { Task { await state.scanJunk() } }
+                EmptyStateView(icon: "trash", title: L("Scan for junk files"),
+                               message: L("Find files left behind by caches, logs and developer tools."),
+                               actionTitle: L("Scan")) { Task { await state.scanJunk() } }
             } else {
                 List {
                     ForEach(state.junkCategories) { category in
@@ -53,18 +53,18 @@ struct JunkView: View {
                 }
                 Divider()
                 HStack(spacing: 12) {
-                    Toggle("Kalıcı olarak sil (Çöp Kutusu'nu atla)", isOn: $permanentDelete)
+                    Toggle(L("Delete permanently (skip the Trash)"), isOn: $permanentDelete)
                         .toggleStyle(.checkbox)
                         .fixedSize()
-                        .help("Kapalıyken öğeler Çöp Kutusu'na taşınır ve geri alınabilir.")
+                        .help(L("When off, items are moved to the Trash and can be restored."))
                     Spacer()
-                    Button("Güvenli olanların hepsini seç") {
+                    Button(L("Select All Safe Items")) {
                         for c in state.junkCategories where c.safety == .safe && !c.permanentOnly {
                             c.items.forEach { selected.insert($0.id) }
                         }
                     }
-                    if !selected.isEmpty { Button("Seçimi Temizle") { selected = [] } }
-                    Button(total > 0 ? "Temizle (\(total.formattedBytes))" : "Temizle", role: .destructive) { confirm = true }
+                    if !selected.isEmpty { Button(L("Clear Selection")) { selected = [] } }
+                    Button(total > 0 ? L("Clean (\(total.formattedBytes))") : L("Clean"), role: .destructive) { confirm = true }
                         .buttonStyle(.borderedProminent)
                         .tint(.red)
                         .disabled(targets.isEmpty || state.isRemoving)
@@ -76,17 +76,17 @@ struct JunkView: View {
         .task {
             if !state.junkReady && !state.isScanningJunk { await state.scanJunk() }
         }
-        .confirmationDialog("\(targets.count) öğe temizlensin mi?", isPresented: $confirm) {
-            Button("Temizle (\(total.formattedBytes))", role: .destructive) { clean(targets) }
-            Button("Vazgeç", role: .cancel) {}
+        .confirmationDialog(L("Clean \(targets.count) items?"), isPresented: $confirm) {
+            Button(L("Clean (\(total.formattedBytes))"), role: .destructive) { clean(targets) }
+            Button(L("Cancel"), role: .cancel) {}
         } message: {
             let permanentCount = targets.filter { $0.permanentOnly || permanentDelete }.count
             if permanentCount == targets.count {
-                Text("Öğeler kalıcı olarak silinecek. Bu işlem geri alınamaz.")
+                Text(L("The items will be deleted permanently. This can’t be undone."))
             } else if permanentCount > 0 {
-                Text("\(targets.count - permanentCount) öğe Çöp Kutusu'na taşınacak, Çöp Kutusu'ndaki \(permanentCount) öğe kalıcı olarak silinecek.")
+                Text(L("\(targets.count - permanentCount) items will be moved to the Trash, and \(permanentCount) items in the Trash will be deleted permanently."))
             } else {
-                Text("Öğeler Çöp Kutusu'na taşınacak ve oradan geri alınabilir. Alan, çöp boşaltıldığında açılır.")
+                Text(L("The items will be moved to the Trash and can be restored from there. The space is freed when the Trash is emptied."))
             }
         }
     }
@@ -138,15 +138,15 @@ struct JunkView: View {
                 }
                 .padding(.leading, 8)
                 .contextMenu {
-                    Button("Finder'da Göster") { Finder.reveal([item.url]) }
-                    Button("Hariç Tut (önerme, silme)") {
+                    Button(L("Show in Finder")) { Finder.reveal([item.url]) }
+                    Button(L("Exclude (don’t suggest or delete)")) {
                         selected.remove(item.id)
                         state.addExclusion(item.url)
                     }
                 }
             }
             if c.items.count > 300 {
-                Text("… ve \(c.items.count - 300) öğe daha (kategori seçildiğinde hepsi dahil edilir)")
+                Text(L("… and \(c.items.count - 300) more items (all are included when the category is selected)"))
                     .font(.caption).foregroundStyle(.secondary)
             }
         } label: {
@@ -169,16 +169,16 @@ struct JunkView: View {
                     Button {
                         Finder.openFullDiskAccessSettings()
                     } label: {
-                        Label("İzin yok", systemImage: "lock.fill").font(.callout).foregroundStyle(.orange)
+                        Label(L("No access"), systemImage: "lock.fill").font(.callout).foregroundStyle(.orange)
                     }
                     .buttonStyle(.plain)
-                    .help("Bu konum okunamadı. Görmek için CleanMac'e Tam Disk Erişimi ver. (Tıkla: ayarları aç)")
+                    .help(L("This location couldn’t be read. Give CleanMac Full Disk Access to see it. (Click to open settings)"))
                 } else if c.items.isEmpty {
-                    Label("Temiz", systemImage: "checkmark").font(.callout).foregroundStyle(.green)
+                    Label(L("All clean"), systemImage: "checkmark").font(.callout).foregroundStyle(.green)
                 } else {
                     VStack(alignment: .trailing, spacing: 2) {
                         Text(c.size.formattedBytes).font(.headline).monospacedDigit()
-                        Text("\(c.items.count) öğe").font(.caption).foregroundStyle(.secondary)
+                        Text(L("\(c.items.count) items")).font(.caption).foregroundStyle(.secondary)
                     }
                 }
             }
@@ -188,8 +188,8 @@ struct JunkView: View {
 
     @ViewBuilder private var devArtifactsSection: some View {
         if state.rootNode == nil {
-            Section("Proje Bağımlılıkları") {
-                Text("node_modules, .venv, Pods gibi klasörleri bulmak için önce Klasör Gezgini'nden bir tarama yap.")
+            Section(L("Project Dependencies")) {
+                Text(L("Run a scan from the Folder Explorer first to find folders like node_modules, .venv and Pods."))
                     .foregroundStyle(.secondary)
             }
         } else if !state.visibleDevArtifacts.isEmpty {
@@ -209,8 +209,8 @@ struct JunkView: View {
                             .buttonStyle(.borderless)
                     }
                     .contextMenu {
-                        Button("Finder'da Göster") { Finder.reveal([node.url]) }
-                        Button("Projeyi Hariç Tut (aktif proje)") {
+                        Button(L("Show in Finder")) { Finder.reveal([node.url]) }
+                        Button(L("Exclude Project (active project)")) {
                             selected.remove(node.url.path)
                             state.addExclusion(node.url.deletingLastPathComponent())
                         }
@@ -218,7 +218,7 @@ struct JunkView: View {
                 }
             } header: {
                 HStack {
-                    Text("Proje Bağımlılıkları (\(state.scanRoot.abbreviatedPath) içinde)")
+                    Text(L("Project Dependencies (in \(state.scanRoot.abbreviatedPath))"))
                     SafetyBadge(safety: .review)
                     Spacer()
                     Text(state.devArtifactTotal.formattedBytes)

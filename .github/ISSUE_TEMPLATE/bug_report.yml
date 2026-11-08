@@ -1,0 +1,56 @@
+name: Bug report
+description: Report something that doesn't work as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! **Please report security vulnerabilities [privately](https://github.com/kadirmertabatay/clean-mac/security/advisories/new), not here.**
+        Remember to hide personal file names before attaching screenshots.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: Describe what happened and what you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Scope: Home Folder
+        2. Start Full Analysis
+        3. …
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: CleanMac version
+      description: CleanMac › About CleanMac
+      placeholder: 1.0.0
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version and Mac model
+      placeholder: macOS 15.1, MacBook Air M2
+    validations:
+      required: true
+  - type: dropdown
+    id: language
+    attributes:
+      label: Interface language
+      options: ["English", "Türkçe", "System Default"]
+  - type: dropdown
+    id: fda
+    attributes:
+      label: Is Full Disk Access granted?
+      options: ["Yes", "No", "Not sure"]
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional information
+      description: Screenshots, Console logs, etc.

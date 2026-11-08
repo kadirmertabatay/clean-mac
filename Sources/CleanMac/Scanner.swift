@@ -15,7 +15,7 @@ struct ScanResult {
     let duration: TimeInterval
 }
 
-/// Paralel çalışan tarayıcıların ortak sayaçları ve iptal bayrağı.
+/// Shared counters and cancellation flag for the parallel scanners.
 final class ScanCoordinator: @unchecked Sendable {
     private let lock = NSLock()
     private var files = 0
@@ -50,10 +50,10 @@ final class ScanCoordinator: @unchecked Sendable {
     }
 }
 
-/// Bir klasörü özyinelemeli olarak tarar, boyut ağacı ve büyük dosya listesi çıkarır.
-/// Üst düzey alt klasörler paralel taranır.
+/// Scans a folder recursively and builds a size tree and a large-file list.
+/// Top-level subfolders are scanned in parallel.
 final class DiskScanner {
-    /// Bu boyutun üzerindeki dosyalar tek tek tutulur; küçükler klasör başına toplanır.
+    /// Files above this size are tracked individually; smaller ones are aggregated per folder.
     static let trackThreshold: Int64 = 1_000_000
 
     static let devArtifactNames: Set<String> = [
@@ -61,8 +61,8 @@ final class DiskScanner {
         "DerivedData", ".dart_tool", ".turbo", ".parcel-cache", ".angular",
     ]
 
-    /// Başka birimleri ve sanal dosya sistemlerini tekrar saymamak için atlanan yollar.
-    /// /.nofollow, /.resolve ve /.vol tüm diski yeniden gösteren sanal yollardır.
+    /// Paths skipped so other volumes and virtual file systems aren't counted twice.
+    /// /.nofollow, /.resolve and /.vol are virtual paths that show the whole disk again.
     static let excludedPaths: Set<String> = ["/Volumes", "/System/Volumes", "/dev", "/net", "/home",
                                              "/.nofollow", "/.resolve", "/.vol"]
 
@@ -92,7 +92,7 @@ final class DiskScanner {
         return path.contains("/Library/") || path.hasSuffix("/Library")
     }
 
-    /// Kökün kendisi, sembolik bağlantısı çözülmüş hâli ya da bir üst klasörü korumalıysa (veya paketse) true.
+    /// True if the root itself, its symlink-resolved form or a parent folder is protected (or a package).
     static func isProtectedRoot(_ root: URL) -> Bool {
         let resolved = root.resolvingSymlinksInPath()
         if isProtectedPath(root.path) || isProtectedPath(resolved.path) { return true }
@@ -104,7 +104,7 @@ final class DiskScanner {
         return false
     }
 
-    /// Kökten bu derinliğe kadar klasörler ayrı işlere bölünür; daha derindekiler tek işte özyinelemeli taranır.
+    /// Folders down to this depth from the root are split into separate jobs; deeper ones are scanned recursively within one job.
     static let splitDepth = 4
 
     func scan(root: URL) -> ScanResult {
@@ -114,8 +114,8 @@ final class DiskScanner {
         let queue = JobQueue(SubdirJob(node: rootNode, protected: Self.isProtectedRoot(root),
                                        inArtifact: false, isArtifact: false, depth: 0))
 
-        // Her çekirdek kuyruktan iş çeker; sığ klasörler yeni işlere bölünür, böylece tek bir
-        // büyük klasör (ör. ~/Library) tüm taramayı tek iş parçacığına mahkûm etmez.
+        // Every core pulls jobs from the queue; shallow folders are split into new jobs, so a single
+        // large folder (e.g. ~/Library) can't confine the whole scan to one thread.
         let workerCount = max(ProcessInfo.processInfo.activeProcessorCount, 2)
         let workers = (0..<workerCount).map { _ in Worker(coordinator: coordinator) }
         DispatchQueue.concurrentPerform(iterations: workerCount) { i in
@@ -123,7 +123,7 @@ final class DiskScanner {
             while let job = queue.next() {
                 var children: [SubdirJob] = []
                 if coordinator.isCancelled {
-                    // Kuyruğu boşaltmak için işi tamamlanmış say.
+                    // Mark the job as finished to drain the queue.
                 } else if job.depth < Self.splitDepth {
                     children = w.scanDirectory(job.node, protected: job.protected, inArtifact: job.inArtifact, recurse: false)
                         .map { $0.withDepth(job.depth + 1) }
@@ -136,7 +136,7 @@ final class DiskScanner {
             }
         }
 
-        // Bölünen klasörlerin boyutlarını en derinden köke doğru topla.
+        // Sum the sizes of split folders from the deepest up to the root.
         let split = workers.flatMap(\.splitJobs).sorted { $0.depth > $1.depth }
         var artifacts = workers.flatMap(\.artifacts)
         for job in split {
@@ -170,7 +170,7 @@ final class DiskScanner {
         }
     }
 
-    /// İş parçacıkları arasında paylaşılan iş kuyruğu. Kuyruk boş ve çalışan iş kalmadığında next() nil döner.
+    /// Job queue shared between threads. next() returns nil once the queue is empty and no jobs are running.
     final class JobQueue: @unchecked Sendable {
         private let cond = NSCondition()
         private var jobs: [SubdirJob]
@@ -220,7 +220,7 @@ final class DiskScanner {
             flush(node.url.path)
         }
 
-        /// `recurse` false ise alt klasörler taranmaz, iş olarak döndürülür (kök için).
+        /// If `recurse` is false, subfolders aren't scanned but returned as jobs (for the root).
         func scanDirectory(_ node: FileNode, protected: Bool, inArtifact: Bool, recurse: Bool) -> [SubdirJob] {
             if coordinator.isCancelled { return [] }
             let contents: [URL]
@@ -240,7 +240,7 @@ final class DiskScanner {
                 if rv.isSymbolicLink == true { continue }
 
                 if rv.isDirectory == true {
-                    // Bazı sanal yollar sonda "/" ile döner (ör. "/.nofollow/").
+                    // Some virtual paths come back with a trailing "/" (e.g. "/.nofollow/").
                     var childPath = child.path
                     if childPath.count > 1, childPath.hasSuffix("/") { childPath.removeLast() }
                     if DiskScanner.excludedPaths.contains(childPath) { continue }
@@ -284,7 +284,7 @@ final class DiskScanner {
 
             if smallCount > 0 {
                 let agg = FileNode(url: node.url.appendingPathComponent(".__kucuk_dosyalar__"),
-                                   name: "\(smallCount) küçük dosya (< 1 MB)", isDirectory: false,
+                                   name: L("\(smallCount) small files (< 1 MB)"), isDirectory: false,
                                    isAggregate: true, size: smallSize, fileCount: smallCount)
                 agg.parent = node
                 node.children.append(agg)
@@ -302,7 +302,7 @@ final class DiskScanner {
         }
     }
 
-    /// Bir dosya ya da klasörün diskte kapladığı toplam alan.
+    /// Total disk space used by a file or folder.
     static func allocatedSize(of url: URL) -> Int64 {
         let keys: Set<URLResourceKey> = [.isDirectoryKey, .isSymbolicLinkKey, .totalFileAllocatedSizeKey, .fileAllocatedSizeKey]
         guard let rv = try? url.resourceValues(forKeys: keys) else { return 0 }

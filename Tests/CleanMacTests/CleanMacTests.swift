@@ -1,7 +1,7 @@
 import XCTest
 @testable import CleanMac
 
-/// Tüm testler yalnızca kendi oluşturdukları geçici klasörde çalışır.
+/// All tests run only in temporary folders they create themselves.
 final class CleanMacTests: XCTestCase {
     var root: URL!
 
@@ -34,23 +34,23 @@ final class CleanMacTests: XCTestCase {
         let result = DiskScanner { _ in }.scan(root: root)
 
         XCTAssertEqual(result.totalFiles, 5)
-        XCTAssertEqual(result.files.count, 4, "1 MB üzeri 4 dosya izlenmeli")
-        XCTAssertEqual(result.devArtifacts.count, 1, "İç içe node_modules tek sayılmalı")
+        XCTAssertEqual(result.files.count, 4, "4 files over 1 MB should be tracked")
+        XCTAssertEqual(result.devArtifacts.count, 1, "Nested node_modules should be counted once")
         XCTAssertEqual(result.devArtifacts.first?.name, "node_modules")
 
         let movies = try XCTUnwrap(result.root.children.first { $0.name == "Movies" })
         XCTAssertEqual(movies.fileCount, 2)
-        XCTAssertTrue(movies.children.contains { $0.isAggregate }, "Küçük dosyalar toplanmalı")
+        XCTAssertTrue(movies.children.contains { $0.isAggregate }, "Small files should be aggregated")
         XCTAssertGreaterThanOrEqual(movies.size, 3_000_000)
         XCTAssertEqual(result.root.size, result.root.children.reduce(0) { $0 + $1.size })
 
         let cache = try XCTUnwrap(result.files.first { $0.name == "cache.bin" })
-        XCTAssertTrue(cache.isProtected, "Library içindekiler korumalı işaretlenmeli")
+        XCTAssertTrue(cache.isProtected, "Items inside Library should be marked protected")
         XCTAssertFalse(try XCTUnwrap(result.files.first { $0.name == "big.mov" }).isProtected)
     }
 
     func testParallelScanSizesAreConsistentAtEveryDepth() throws {
-        // splitDepth'ten derin klasörler: bölünen ve özyinelemeli taranan kısımlar birlikte doğru toplanmalı.
+        // Folders deeper than splitDepth: the split and recursively scanned parts must add up correctly.
         for i in 0..<3 {
             try makeFile("a\(i)/b/c/d/e/f/g/deep\(i).bin", bytes: 1_200_000)
             try makeFile("a\(i)/b/c/mid.txt", bytes: 5_000)
@@ -66,7 +66,7 @@ final class CleanMacTests: XCTestCase {
             guard n.isDirectory else { return }
             XCTAssertEqual(n.size, n.children.reduce(0) { $0 + $1.size }, n.url.path)
             XCTAssertEqual(n.fileCount, n.children.reduce(0) { $0 + $1.fileCount }, n.url.path)
-            XCTAssertEqual(n.children.map(\.size), n.children.map(\.size).sorted(by: >), "sıralı olmalı")
+            XCTAssertEqual(n.children.map(\.size), n.children.map(\.size).sorted(by: >), "should be sorted")
             n.children.forEach(check)
         }
         check(result.root)
@@ -78,11 +78,11 @@ final class CleanMacTests: XCTestCase {
         try makeFile("b/photo copy.jpg", bytes: 2_500_000)
         try makeFile("c/photo2.jpg", bytes: 2_500_000)
         try makeFile("d/same-size-different.jpg", bytes: 2_500_000, seed: 99)
-        // Ortası farklı, baş ve sonu aynı: kısmi özet eşleşir, tam özet ayırmalı.
+        // Different middle, same head and tail: the partial digest matches, the full digest must tell them apart.
         var tricky = try Data(contentsOf: a)
         tricky[1_250_000] ^= 0xFF
         try tricky.write(to: root.appendingPathComponent("e-tricky.jpg"))
-        // Sabit bağlantı kopya sayılmamalı.
+        // A hard link must not count as a copy.
         try FileManager.default.linkItem(at: a, to: root.appendingPathComponent("a/hardlink.jpg"))
 
         let scan = DiskScanner { _ in }.scan(root: root)
@@ -116,17 +116,17 @@ final class CleanMacTests: XCTestCase {
         XCTAssertEqual(state.duplicateGroups.count, 1)
         XCTAssertEqual(state.devArtifacts.count, 1)
 
-        // Kalıcı silme: yalnızca test dosyaları.
+        // Permanent deletion: test files only.
         let artifact = state.devArtifacts[0]
         let result = await state.remove([RemovalTarget(url: dup, size: 2_000_000),
                                          RemovalTarget(url: artifact.url, size: artifact.size)], permanently: true)
         XCTAssertEqual(result.succeeded.count, 2)
         XCTAssertFalse(FileManager.default.fileExists(atPath: dup.path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: keep.path))
-        XCTAssertTrue(state.duplicateGroups.isEmpty, "Tek kopya kalınca grup kaybolmalı")
+        XCTAssertTrue(state.duplicateGroups.isEmpty, "The group should disappear when a single copy remains")
         XCTAssertTrue(state.devArtifacts.isEmpty)
         XCTAssertFalse(state.files.contains { $0.url == dup })
-        XCTAssertFalse(state.files.contains { $0.name == "lib.js" }, "Silinen klasörün içindekiler de düşmeli")
+        XCTAssertFalse(state.files.contains { $0.name == "lib.js" }, "Contents of the deleted folder should be removed too")
         XCTAssertLessThan(rootNode.size, sizeBefore)
         XCTAssertNil(rootNode.find(path: dup.path))
         XCTAssertEqual(rootNode.size, rootNode.children.reduce(0) { $0 + $1.size })
@@ -143,7 +143,7 @@ final class CleanMacTests: XCTestCase {
         XCTAssertNotNil(record.trashPath)
         XCTAssertTrue(state.isInTrash(record))
 
-        // Geri al: dosya eski yerine dönmeli, Çöp Kutusu'nda iz kalmamalı.
+        // Restore: the file must return to its original location with no trace left in the Trash.
         state.restore(record)
         XCTAssertTrue(FileManager.default.fileExists(atPath: file.path))
         XCTAssertTrue(state.history.first!.restored)
@@ -159,13 +159,13 @@ final class CleanMacTests: XCTestCase {
         state.addExclusion(excluded.deletingLastPathComponent())
 
         let result = await state.remove([
-            // Taramadaki tarih farklı → dosya sonradan değişmiş.
+            // Different date from the scan → the file changed afterwards.
             RemovalTarget(url: changed, size: 1_000, expectedModified: Date(timeIntervalSince1970: 0)),
-            // Korunacak kopya artık yok → son kopya silinmemeli.
+            // The copy to keep no longer exists → the last copy must not be deleted.
             RemovalTarget(url: lastCopy, size: 1_000, keepAnyOf: [root.appendingPathComponent("dups/gone.bin")]),
-            // Hariç tutulan klasörde.
+            // Inside an excluded folder.
             RemovalTarget(url: excluded, size: 1_000),
-            // Zaten yok.
+            // Already gone.
             RemovalTarget(url: root.appendingPathComponent("missing.bin"), size: 1_000),
         ], permanently: true)
 
@@ -191,24 +191,229 @@ final class CleanMacTests: XCTestCase {
         let categories = await JunkScanner.scanAll()
         XCTAssertEqual(categories.count, JunkScanner.definitions.count)
         for c in categories {
-            print("[junk] \(c.title): \(c.size.formattedBytes) (\(c.items.count) öğe)")
+            print("[junk] \(c.title): \(c.size.formattedBytes) (\(c.items.count) items)")
             XCTAssertEqual(c.items, c.items.sorted { $0.size > $1.size })
         }
     }
 }
 
-/// Gerçek ana klasörde salt okunur performans ölçümü: CLEANMAC_BENCH=1 swift test --filter Benchmark
+/// Read-only performance measurement on the real home folder: CLEANMAC_BENCH=1 swift test --filter Benchmark
 final class BenchmarkTests: XCTestCase {
     func testHomeScanPerformance() async throws {
         try XCTSkipUnless(ProcessInfo.processInfo.environment["CLEANMAC_BENCH"] == "1")
         let path = ProcessInfo.processInfo.environment["CLEANMAC_BENCH_ROOT"]
         let home = path.map { URL(fileURLWithPath: $0) } ?? FileManager.default.homeDirectoryForCurrentUser
         let result = DiskScanner { _ in }.scan(root: home)
-        print("[bench] \(result.totalFiles) dosya, \(result.root.size.formattedBytes), \(result.files.count) büyük dosya, \(result.devArtifacts.count) bağımlılık klasörü, \(result.unreadable) okunamayan, \(String(format: "%.1f", result.duration)) sn")
+        print("[bench] \(result.totalFiles) files, \(result.root.size.formattedBytes), \(result.files.count) large files, \(result.devArtifacts.count) dependency folders, \(result.unreadable) unreadable, \(String(format: "%.1f", result.duration)) s")
         for c in result.root.children.prefix(8) { print("[bench]   \(c.name): \(c.size.formattedBytes)") }
         let start = Date()
         let groups = DuplicateFinder.find(in: result.files, minSize: 1_000_000) { _ in }
         let waste = groups.filter { $0.files.contains { !$0.isProtected } }.reduce(Int64(0)) { $0 + $1.wasted }
-        print("[bench] tekrar: \(groups.count) grup, kullanıcı alanında boşa ~\(waste.formattedBytes), \(String(format: "%.1f", Date().timeIntervalSince(start))) sn")
+        print("[bench] duplicates: \(groups.count) groups, ~\(waste.formattedBytes) wasted in user space, \(String(format: "%.1f", Date().timeIntervalSince(start))) s")
+    }
+}
+
+final class StorageTests: XCTestCase {
+    func testParsesTimeMachineSnapshots() {
+        let text = """
+        Snapshots for disk /:
+        com.apple.TimeMachine.2026-11-07-093012.local
+        com.apple.TimeMachine.2026-11-08-101010.local
+        com.apple.os.update-ABC
+        """
+        let snaps = StorageInspector.parseSnapshots(text)
+        XCTAssertEqual(snaps.map(\.dateString), ["2026-11-08-101010", "2026-11-07-093012"])
+        XCTAssertNotNil(snaps.first?.date)
+    }
+
+    func testReadsStartupContainer() throws {
+        let out = Shell.run("/usr/sbin/diskutil", ["apfs", "list", "-plist"])
+        let report = try XCTUnwrap(StorageInspector.parseContainer(plist: Data(out.stdout.utf8)))
+        XCTAssertGreaterThan(report.capacity, 0)
+        XCTAssertTrue(report.volumes.contains { $0.role == "Data" })
+        for v in report.volumes { print("[storage] \(v.title): \(v.used.formattedBytes)") }
+    }
+}
+
+final class AppInventoryTests: XCTestCase {
+    func testListsInstalledAppsReadOnly() {
+        let apps = AppInventory.installedApps()
+        XCTAssertFalse(apps.isEmpty)
+        XCTAssertEqual(apps.map(\.size), apps.map(\.size).sorted(by: >))
+        for a in apps.prefix(5) {
+            print("[apps] \(a.name): \(a.size.formattedBytes), last opened: \(a.lastUsed.map { "\($0)" } ?? "?")")
+        }
+        if let big = apps.first(where: { !$0.isApple }) {
+            for l in AppInventory.leftovers(for: big) { print("[apps]   leftover \(l.kind): \(l.url.lastPathComponent) \(l.size.formattedBytes)") }
+        }
+    }
+}
+
+final class DevToolsTests: XCTestCase {
+    func testParsesBrewDryRun() {
+        let text = """
+        Would remove: /opt/homebrew/Cellar/node/22.1.0 (2,000 files, 80MB)
+        Would remove: /Users/x/Library/Caches/Homebrew/downloads/abc--wget.bottle.tar.gz (1.2MB)
+        ==> This operation would free approximately 209.2MB of disk space.
+        """
+        let r = DevTools.parseBrew(text)
+        XCTAssertEqual(r.items.count, 2)
+        XCTAssertEqual(r.freeable, "209.2MB")
+    }
+
+    func testProjectLastActivityIgnoresDependencyFolder() throws {
+        let project = FileManager.default.temporaryDirectory.appendingPathComponent("CleanMacProj-\(UUID().uuidString)")
+        let deps = project.appendingPathComponent("node_modules")
+        try FileManager.default.createDirectory(at: deps, withIntermediateDirectories: true)
+        let pkg = project.appendingPathComponent("package.json")
+        try Data("{}".utf8).write(to: pkg)
+        let old = Date(timeIntervalSinceNow: -100 * 86_400)
+        try FileManager.default.setAttributes([.modificationDate: old], ofItemAtPath: pkg.path)
+        defer { try? FileManager.default.removeItem(at: project) }
+        let activity = try XCTUnwrap(DevTools.projectLastActivity(deps))
+        XCTAssertEqual(activity.timeIntervalSince1970, old.timeIntervalSince1970, accuracy: 1)
+    }
+
+    func testReadOnlyToolReports() {
+        if let b = DevTools.brewDryRun() { print("[dev] brew: \(b.items.count) items, \(b.freeable ?? "-")") }
+        print("[dev] simulators: \(DevTools.unavailableSimulators().count)")
+        if let d = DevTools.dockerReport() { print("[dev] docker running: \(d.running), virtual disk: \(d.diskImageSize.formattedBytes)") }
+    }
+}
+
+final class GrowthTests: XCTestCase {
+    func testDiffFindsGrowthNewFilesAndShrink() {
+        let old = ScanSnapshot(root: "/r", date: Date(timeIntervalSinceNow: -86_400), total: 1_000_000_000,
+                               dirs: ["/r/a": 500_000_000, "/r/b": 300_000_000, "/r/c": 20_000_000],
+                               bigFiles: ["/r/a/old.mov": 200_000_000])
+        let new = ScanSnapshot(root: "/r", date: Date(), total: 1_400_000_000,
+                               dirs: ["/r/a": 900_000_000, "/r/b": 100_000_000, "/r/c": 30_000_000, "/r/d": 80_000_000],
+                               bigFiles: ["/r/a/old.mov": 200_000_000, "/r/a/new.mov": 400_000_000])
+        let d = GrowthDiff.compute(old: old, new: new)
+        XCTAssertEqual(d.totalDelta, 400_000_000)
+        XCTAssertEqual(d.grown.map(\.path), ["/r/a", "/r/d"], "A 10 MB change should count as noise")
+        XCTAssertEqual(d.shrunk.map(\.path), ["/r/b"])
+        XCTAssertEqual(d.newFiles.map(\.path), ["/r/a/new.mov"])
+        XCTAssertTrue(d.goneFiles.isEmpty)
+    }
+
+    @MainActor
+    func testScanStoresSnapshotsPerRoot() async throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("CleanMacGrowth-\(UUID().uuidString)")
+        let data = dir.appendingPathComponent("data/sub")
+        try FileManager.default.createDirectory(at: data, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try Data(count: 12_000_000).write(to: data.appendingPathComponent("a.bin"))
+
+        let state = AppState(historyURL: dir.appendingPathComponent("support/history.json"))
+        state.scanRoot = dir.appendingPathComponent("data")
+        await state.scan()
+        try Data(count: 70_000_000).write(to: data.appendingPathComponent("b.bin"))
+        await state.scan()
+
+        XCTAssertEqual(state.scanSnapshots.count, 2)
+        let diff = GrowthDiff.compute(old: state.scanSnapshots[1], new: state.scanSnapshots[0])
+        XCTAssertEqual(diff.grown.first?.url.lastPathComponent, "sub")
+        XCTAssertGreaterThanOrEqual(diff.totalDelta, 60_000_000)
+    }
+}
+
+final class MonitorTests: XCTestCase {
+    func testLowSpaceAlertThrottling() {
+        let now = Date()
+        XCTAssertFalse(SpaceMonitor.shouldAlert(freeFraction: 0.30, threshold: 0.10, lastAlert: nil, now: now))
+        XCTAssertTrue(SpaceMonitor.shouldAlert(freeFraction: 0.08, threshold: 0.10, lastAlert: nil, now: now))
+        XCTAssertFalse(SpaceMonitor.shouldAlert(freeFraction: 0.08, threshold: 0.10, lastAlert: now.addingTimeInterval(-3_600), now: now))
+        XCTAssertTrue(SpaceMonitor.shouldAlert(freeFraction: 0.08, threshold: 0.10, lastAlert: now.addingTimeInterval(-90_000), now: now))
+    }
+}
+
+final class RuleTests: XCTestCase {
+    func testDueScheduling() {
+        let created = Date(timeIntervalSinceNow: -8 * 86_400)
+        var rule = CleanupRule(kind: .junk("logs"), interval: .weekly, createdAt: created)
+        XCTAssertTrue(rule.isDue())
+        rule.lastRun = Date(timeIntervalSinceNow: -86_400)
+        XCTAssertFalse(rule.isDue())
+        rule.lastRun = nil
+        rule.enabled = false
+        XCTAssertFalse(rule.isDue())
+    }
+
+    func testInstallerRulePicksOnlyOldInstallers() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("CleanMacDL-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        for name in ["old.dmg", "new.dmg", "old.pdf"] { try Data(count: 5_000).write(to: dir.appendingPathComponent(name)) }
+        let rule = CleanupRule(kind: .installers(days: 30), interval: .weekly)
+        // With "now" moved 60 days ahead the files count as old; a .pdf is never selected.
+        let later = RuleEngine.targets(for: rule, downloads: dir, now: Date(timeIntervalSinceNow: 60 * 86_400))
+        XCTAssertEqual(Set(later.map(\.url.lastPathComponent)), ["old.dmg", "new.dmg"])
+        let today = RuleEngine.targets(for: rule, downloads: dir)
+        XCTAssertTrue(today.isEmpty)
+    }
+
+    func testRuleCodableRoundTrip() throws {
+        let rules = CleanupRule.presets
+        let decoded = try JSONDecoder().decode([CleanupRule].self, from: JSONEncoder().encode(rules))
+        XCTAssertEqual(decoded.map(\.kind), rules.map(\.kind))
+    }
+}
+
+final class TreemapTests: XCTestCase {
+    func testLayoutFillsAreaProportionally() {
+        let values: [Double] = [6, 6, 4, 3, 2, 2, 1]
+        let rect = CGRect(x: 0, y: 0, width: 600, height: 400)
+        let rects = Treemap.layout(values, in: rect)
+        let total = values.reduce(0, +)
+        for (v, r) in zip(values, rects) {
+            XCTAssertEqual(Double(r.width * r.height), v / total * 240_000, accuracy: 1)
+            XCTAssertTrue(rect.insetBy(dx: -0.5, dy: -0.5).contains(r), "\(r)")
+        }
+        // Rectangles must not overlap.
+        for i in rects.indices { for j in rects.indices where i < j {
+            XCTAssertLessThan(rects[i].intersection(rects[j]).width * rects[i].intersection(rects[j]).height, 1)
+        } }
+        // Squarified: aspect ratios must be reasonable.
+        XCTAssertLessThan(rects.map { max($0.width / $0.height, $0.height / $0.width) }.max()!, 4)
+    }
+
+    func testEmptyAndZeroInput() {
+        XCTAssertEqual(Treemap.layout([], in: CGRect(x: 0, y: 0, width: 10, height: 10)), [])
+        XCTAssertEqual(Treemap.layout([0, 0], in: CGRect(x: 0, y: 0, width: 10, height: 10)), [.zero, .zero])
+    }
+}
+
+final class ArchiveTests: XCTestCase {
+    func testArchiveCopiesVerifiesAndLogs() throws {
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent("CleanMacArchive-\(UUID().uuidString)")
+        let src = base.appendingPathComponent("src"), dst = base.appendingPathComponent("dst")
+        try FileManager.default.createDirectory(at: src, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: dst, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: base) }
+        let file = src.appendingPathComponent("video.mov")
+        try Data((0..<300_000).map { UInt8(truncatingIfNeeded: $0) }).write(to: file)
+        let entry = FileEntry(url: file, size: 300_000, modified: nil, accessed: nil, isProtected: false)
+
+        let r = try ArchiveEngine.archive([entry], to: dst, requireDifferentVolume: false) { _, _ in }
+        XCTAssertEqual(r.verified.count, 1)
+        XCTAssertTrue(r.failed.isEmpty)
+        let copy = r.verified[0].destination
+        XCTAssertEqual(DuplicateFinder.fullHash(copy), DuplicateFinder.fullHash(file))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: file.path), "The engine doesn’t delete the original")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: dst.appendingPathComponent("CleanMac Archive/archive-log.tsv").path))
+
+        // A second archive with the same name must not overwrite.
+        let r2 = try ArchiveEngine.archive([entry], to: dst, requireDifferentVolume: false) { _, _ in }
+        XCTAssertNotEqual(r2.verified[0].destination, copy)
+    }
+
+    func testRejectsSameVolume() throws {
+        let tmp = FileManager.default.temporaryDirectory
+        let file = tmp.appendingPathComponent("CleanMacSameVol-\(UUID().uuidString)")
+        try Data("x".utf8).write(to: file)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let entry = FileEntry(url: file, size: 1, modified: nil, accessed: nil, isProtected: false)
+        XCTAssertThrowsError(try ArchiveEngine.archive([entry], to: tmp) { _, _ in })
     }
 }
