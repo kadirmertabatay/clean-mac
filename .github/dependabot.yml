@@ -1,0 +1,11 @@
+# Keeps the GitHub Actions used by the workflows up to date. The app itself has no dependencies.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: monthly
+    labels: ["dependencies"]
+    commit-message:
+      prefix: "CI"

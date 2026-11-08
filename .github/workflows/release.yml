@@ -26,4 +26,4 @@ jobs:
           test -f "$ZIP" || { echo "The Info.plist version ($ZIP) does not match the tag"; exit 1; }
           SHA=$(cut -d' ' -f1 "$ZIP.sha256")
           gh release create "$GITHUB_REF_NAME" "$ZIP" "$ZIP.sha256" --draft --title "CleanMac $VERSION" \
-            --notes "See the README for installation and first launch. SHA-256: \`$SHA\`"
+            --generate-notes --notes "See the README for installation and first launch. SHA-256: \`$SHA\`"

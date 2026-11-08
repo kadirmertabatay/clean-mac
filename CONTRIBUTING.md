@@ -26,10 +26,32 @@ swift test
 
 See [docs/development.md](docs/development.md) for details (environment variables, running isolated with a demo folder, screenshots, translations), and [docs/architecture.md](docs/architecture.md) for how the code is organized.
 
+## Branching model
+
+CleanMac uses [git flow](https://nvie.com/posts/a-successful-git-branching-model/):
+
+| Branch | Purpose | Created from | Merged into |
+|---|---|---|---|
+| `main` | Released versions only. Every commit is a tagged release (`v1.0.0`). | | |
+| `develop` | Integration branch for the next release. Pull requests target this branch. | `main` | |
+| `feature/<name>` | A new feature or improvement, e.g. `feature/spanish-translation` | `develop` | `develop` |
+| `fix/<name>` | A bug fix for the next release | `develop` | `develop` |
+| `release/<version>` | Release preparation: version bump, changelog, screenshots | `develop` | `main` and `develop` |
+| `hotfix/<version>` | An urgent fix for the current release | `main` | `main` and `develop` |
+
+Both `main` and `develop` are protected: changes arrive through pull requests with a passing CI run.
+
+```bash
+git switch develop && git pull
+git switch -c feature/short-description
+# …commit…
+git push -u origin feature/short-description   # then open a pull request against develop
+```
+
 ## Pull request process
 
 1. Before a large change, open an issue so we can agree on the approach first.
-2. Create a branch from `main`: `git switch -c feature/short-description`.
+2. Create a branch from `develop` (see [Branching model](#branching-model)) and open your pull request against `develop`.
 3. Make the change in small, focused commits. Write commit messages in English, in the imperative mood: `Add …`, `Fix …`.
 4. Add or update tests for anything that changes behavior. `swift test` must pass.
 5. If you add or change user-facing strings, run `./scripts/update-strings.sh` and add the Turkish translation (or mention in the PR that it's missing so someone can help).
