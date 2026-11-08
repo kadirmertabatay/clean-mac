@@ -4,7 +4,7 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
-## [1.0.0] - 2026-11-08
+## [1.0.0] - 2026-11-09
 
 First public release.
 
