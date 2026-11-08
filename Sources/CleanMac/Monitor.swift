@@ -7,9 +7,10 @@ enum Prefs {
     static let lowSpaceAlerts = "lowSpaceAlerts"
     static let lowSpaceThreshold = "lowSpaceThreshold"   // yüzde
     static let lastLowSpaceAlert = "lastLowSpaceAlert"
+    static let showSplash = "showSplash"
 
     static func register() {
-        UserDefaults.standard.register(defaults: [menuBarEnabled: true, lowSpaceAlerts: true, lowSpaceThreshold: 10])
+        UserDefaults.standard.register(defaults: [menuBarEnabled: true, lowSpaceAlerts: true, lowSpaceThreshold: 10, showSplash: true])
     }
 }
 
@@ -130,9 +131,13 @@ struct SettingsView: View {
     @AppStorage(Prefs.lowSpaceAlerts) private var lowSpaceAlerts = true
     @AppStorage(Prefs.lowSpaceThreshold) private var threshold = 10
     @AppStorage("permanentDelete") private var permanentDelete = false
+    @AppStorage(Prefs.showSplash) private var showSplash = true
 
     var body: some View {
         Form {
+            Section("Görünüm") {
+                Toggle("Açılışta karşılama ekranını göster", isOn: $showSplash)
+            }
             Section("Menü çubuğu") {
                 Toggle("Menü çubuğunda boş alanı göster", isOn: $menuBarEnabled)
                 Text("Açıkken pencere kapatılsa da CleanMac menü çubuğunda çalışmaya devam eder.")

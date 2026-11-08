@@ -59,6 +59,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 struct ContentView: View {
     @EnvironmentObject var state: AppState
+    @State private var splashVisible = ContentView.shouldShowSplash()
+
+    /// Karşılama ekranı uygulama açılışında bir kez gösterilir; pencere yeniden açılınca gösterilmez.
+    @MainActor private static var splashShown = false
+    @MainActor private static func shouldShowSplash() -> Bool {
+        guard !splashShown, UserDefaults.standard.bool(forKey: Prefs.showSplash) else { return false }
+        splashShown = true
+        return true
+    }
 
     var body: some View {
         NavigationSplitView {
@@ -114,6 +123,16 @@ struct ContentView: View {
             }
         }
         .animation(.spring(duration: 0.3), value: state.toast)
+        .overlay {
+            if splashVisible {
+                SplashView(disk: state.disk) {
+                    withAnimation(.easeInOut(duration: 0.45)) { splashVisible = false }
+                }
+                .transition(.opacity.combined(with: .scale(scale: 1.04)))
+                .zIndex(10)
+            }
+        }
+        .toolbar(splashVisible ? .hidden : .automatic, for: .windowToolbar)
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             state.refreshDisk()
         }

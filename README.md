@@ -15,6 +15,7 @@ Mac'in depolama alanını analiz eden ve temiz tutmana yardım eden, tamamen yer
 | **Ne Büyüdü?** | Her taramanın özeti saklanır; önceki taramalara göre büyüyen/küçülen klasörler ve yeni büyük dosyalar |
 | **Klasör Gezgini** | Seçilen klasörün boyut ağacı (liste ya da treemap); çift tıkla içine gir, sağ tık ile Finder'da göster / çöpe taşı |
 | **Büyük Dosyalar** | Boyut, tür, son kullanım ve konuma göre sıralanabilen tablo; "6+ ay kullanılmayan" filtresi; harici diske doğrulamalı arşivleme |
+| **Karşılama ekranı** | Açılışta logo, tarama halkası ve disk durumuyla kısa bir giriş; tıklayınca geçilir, Ayarlar'dan kapatılabilir, "Hareketi azalt" açıksa animasyonsuz gösterilir |
 | **Menü çubuğu** | Üst barda boş alan; belirlenen eşiğin altına düşünce bildirim (Ayarlar › ⌘,) |
 | **Benzer Fotoğraflar** | Seri çekimleri ve yeniden kaydedilmiş kopyaları Apple Vision görüntü parmak iziyle (yerelde) gruplar |
 | **Uygulamalar** | Uygulamaları Library'deki kalıntılarıyla birlikte kaldırır; son açılma tarihine göre kullanılmayanları gösterir |
