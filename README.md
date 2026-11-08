@@ -90,5 +90,3 @@ scripts/make-icon.swift  Resources/logo.png'den beyaz çerçeveli uygulama simge
 ## Lisans
 
 [MIT](LICENSE) © 2026 Kadir Mert Abatay
-
-Yol haritası için [TODO.md](TODO.md) dosyasına bak.
