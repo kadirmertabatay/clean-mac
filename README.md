@@ -174,9 +174,26 @@ To grant Full Disk Access, add CleanMac under **System Settings › Privacy & Se
 | [Development](docs/development.md) | Building, testing, environment variables, screenshots, translations, releasing |
 | [FAQ and Troubleshooting](docs/faq.md) | Common questions, permission issues, launch warnings |
 
+## Roadmap
+
+- [ ] Developer ID signing and notarization, so releases open without a Gatekeeper warning
+- [ ] Homebrew Cask (`brew install --cask cleanmac`)
+- [ ] More languages (translations are welcome, see [Translations](docs/development.md#translations))
+- [ ] More junk categories: Mail and Messages attachments, old iOS updates, browser caches per profile
+- [ ] Export a scan report (CSV / Markdown)
+- [ ] Optional scheduled background scans
+
+Have an idea? Open a [feature request](https://github.com/kadirmertabatay/clean-mac/issues/new/choose) or start a [discussion](https://github.com/kadirmertabatay/clean-mac/discussions).
+
 ## Contributing
 
-Bug reports, ideas, translations and pull requests are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md) before you start. Release notes are in [CHANGELOG.md](CHANGELOG.md).
+Bug reports, ideas, translations and pull requests are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md) before you start. New pull requests target the `develop` branch; see the [branching model](CONTRIBUTING.md#branching-model). Release notes are in [CHANGELOG.md](CHANGELOG.md).
+
+Issues labeled [good first issue](https://github.com/kadirmertabatay/clean-mac/labels/good%20first%20issue) are a good place to start. For questions, see [SUPPORT.md](SUPPORT.md).
+
+## Support the project
+
+If CleanMac helped you free up space, consider giving the repository a ⭐. It helps other Mac users find it.
 
 ## License
 

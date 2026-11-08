@@ -1,0 +1,16 @@
+[
+  {"name": "bug", "color": "d73a4a", "description": "Something isn't working"},
+  {"name": "enhancement", "color": "a2eeef", "description": "New feature or improvement"},
+  {"name": "safety", "color": "b60205", "description": "Affects what gets deleted or the safety checks"},
+  {"name": "translation", "color": "5319e7", "description": "Translations and wording"},
+  {"name": "documentation", "color": "0075ca", "description": "Docs, README, screenshots"},
+  {"name": "good first issue", "color": "7057ff", "description": "Good for newcomers"},
+  {"name": "help wanted", "color": "008672", "description": "Extra attention is needed"},
+  {"name": "question", "color": "d876e3", "description": "Further information is requested"},
+  {"name": "dependencies", "color": "0366d6", "description": "Updates a dependency (GitHub Actions)"},
+  {"name": "ci", "color": "ededed", "description": "Build, test and release automation"},
+  {"name": "refactor", "color": "fbca04", "description": "Code change without behavior change"},
+  {"name": "skip-changelog", "color": "cccccc", "description": "Leave out of the release notes"},
+  {"name": "duplicate", "color": "cfd3d7", "description": "This issue or pull request already exists"},
+  {"name": "wontfix", "color": "ffffff", "description": "This will not be worked on"}
+]
