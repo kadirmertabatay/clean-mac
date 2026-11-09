@@ -106,6 +106,13 @@ The script:
 3. The app resizes the window to 1280×820, moves it to the highest-resolution screen, runs the full analysis, visits each screen and captures it. Nothing is deleted. Changed settings are restored at the end.
 4. The images are copied to the output folder and the temporary folder is deleted.
 
+After regenerating the screenshots, rebuild the README tour and the social preview image from them:
+
+```bash
+swift scripts/make-demo-gif.swift          # docs/images/demo.gif (README header)
+swift scripts/make-social-preview.swift    # docs/images/social-preview.png (upload under Settings › Social preview)
+```
+
 Notes:
 
 - Don't touch the window while the screenshots are being taken; it takes about a minute.

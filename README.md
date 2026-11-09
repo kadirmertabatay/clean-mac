@@ -11,6 +11,8 @@
 
 <p align="center">
   <a href="https://github.com/kadirmertabatay/clean-mac/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/kadirmertabatay/clean-mac/ci.yml?branch=main&label=CI" alt="CI status"></a>
+  <a href="https://github.com/kadirmertabatay/clean-mac/releases/latest"><img src="https://img.shields.io/github/v/release/kadirmertabatay/clean-mac?label=release&color=0A84FF" alt="Latest release"></a>
+  <a href="https://github.com/kadirmertabatay/clean-mac/releases"><img src="https://img.shields.io/github/downloads/kadirmertabatay/clean-mac/total?color=brightgreen" alt="Downloads"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
   <img src="https://img.shields.io/badge/macOS-14%2B-black?logo=apple" alt="macOS 14+">
   <img src="https://img.shields.io/badge/Swift-5.9%2B-F05138?logo=swift&logoColor=white" alt="Swift 5.9+">
@@ -34,7 +36,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/assistant.png" width="900" alt="CleanMac Smart Assistant screen">
+  <img src="docs/images/demo.gif" width="880" alt="A tour of CleanMac: Smart Assistant, Smart Cleanup, treemap, duplicates, junk files, What Grew? and similar photos">
 </p>
 
 ---
@@ -106,6 +108,22 @@ And also:
 | **History and Exclusions** | A record of every removed item with restore. Excluded items are never suggested and never deleted. |
 
 Every screen is described in detail in **[docs/features.md](docs/features.md)**.
+
+## How it compares
+
+| | CleanMac | [DaisyDisk](https://daisydiskapp.com/) | [GrandPerspective](https://grandperspectiv.sourceforge.net/) | [OmniDiskSweeper](https://www.omnigroup.com/more) | [CleanMyMac](https://macpaw.com/cleanmymac) |
+|---|:---:|:---:|:---:|:---:|:---:|
+| Price | Free | $9.99 one-time | Free ($2.99 on the App Store) | Free | Subscription (from $3.33/month) |
+| Open source | ✅ MIT | — | ✅ GPL | — | — |
+| Visual disk map | ✅ Treemap and donut chart | ✅ | ✅ Treemap | Sorted list | — |
+| Duplicate files | ✅ SHA-256 | — | — | — | ✅ |
+| Similar photos | ✅ On device | — | — | — | ✅ |
+| App uninstaller with leftovers | ✅ | — | — | — | ✅ |
+| Developer cleanup (Xcode, Docker, `node_modules`) | ✅ | — | — | — | — |
+| "Never touch this" protections per app | ✅ | — | — | — | — |
+| Growth history between scans | ✅ | — | — | — | — |
+
+<sub>Based on each vendor's public product page (November 2026); "—" means the feature isn't listed there. Spotted a mistake? Please [open an issue](https://github.com/kadirmertabatay/clean-mac/issues/new/choose).</sub>
 
 ## Installation
 
