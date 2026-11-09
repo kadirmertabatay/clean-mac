@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-11-09
+
+### Changed
+
+- README: animated tour, latest release and download badges, and a comparison with similar apps.
+- Social preview image and the scripts that generate the README tour and the social preview.
+
 ## [1.0.1] - 2026-11-09
 
 ### Added
@@ -40,6 +47,7 @@ First public release.
 - English interface with a Turkish translation, selectable in Settings.
 - Documentation (`docs/`), a screenshot generation script and universal (arm64 + x86_64) release packaging.
 
-[Unreleased]: https://github.com/kadirmertabatay/clean-mac/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/kadirmertabatay/clean-mac/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/kadirmertabatay/clean-mac/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/kadirmertabatay/clean-mac/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/kadirmertabatay/clean-mac/releases/tag/v1.0.0
